@@ -79,6 +79,12 @@ export class UserProfile {
   agreementSignedAt: Date;
 
   @Column({ default: false })
+  emailVerified: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  emailVerifiedAt: Date;
+
+  @Column({ default: false })
   twoFactorEnabled: boolean;
 
   @Column({ nullable: true })

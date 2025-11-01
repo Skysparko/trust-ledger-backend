@@ -6,10 +6,10 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
+import { Repository, DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { randomBytes } from 'crypto';
+import { randomBytes, randomUUID } from 'crypto';
 import { User, UserType } from '../entities/user.entity';
 import { UserProfile } from '../entities/user-profile.entity';
 import { Admin } from '../entities/admin.entity';
@@ -32,6 +32,8 @@ export class AuthService {
     private adminRepository: Repository<Admin>,
     @InjectRepository(EmailToken)
     private emailTokenRepository: Repository<EmailToken>,
+    @InjectDataSource()
+    private dataSource: DataSource,
     private jwtService: JwtService,
     private emailService: EmailService,
     private configService: ConfigService,
@@ -70,6 +72,25 @@ export class AuthService {
     const user = await this.validateUser(loginDto.email, loginDto.password);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // Check if email verification is enabled and required
+    const emailVerificationEnabled = this.configService.get<boolean>(
+      'EMAIL_VERIFICATION_ENABLED',
+      true,
+    );
+
+    if (emailVerificationEnabled) {
+      // Check if email is verified
+      const userProfile = await this.profileRepository.findOne({
+        where: { userId: user.id },
+      });
+
+      if (!userProfile || !userProfile.emailVerified) {
+        throw new UnauthorizedException(
+          'Please verify your email before logging in. Check your inbox for the verification link.',
+        );
+      }
     }
 
     await this.userRepository.update({ id: user.id }, {
@@ -127,24 +148,64 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(signupDto.password, 10);
 
-    const user = this.userRepository.create({
+    // Generate IDs manually for MongoDB compatibility
+    const userId = randomUUID();
+    const profileId = randomUUID();
+    const now = new Date();
+
+    // Use MongoDB manager's native insertOne to avoid relation metadata issues
+    const mongoManager = this.dataSource.mongoManager;
+
+    // Create user using MongoDB manager
+    const userData = {
+      _id: userId,
+      id: userId,
       type: signupDto.type,
       email: signupDto.email,
       name: signupDto.name,
       password: hashedPassword,
       isActive: true,
+      createdAt: now,
+    };
+
+    try {
+      await mongoManager.getMongoRepository(User).insertOne(userData);
+    } catch (error: any) {
+      // Handle MongoDB duplicate key error (race condition)
+      // Error code 11000 is MongoDB's duplicate key error
+      if (
+        error.code === 11000 ||
+        error.code === '11000' ||
+        error.message?.includes('duplicate key') ||
+        error.message?.includes('E11000')
+      ) {
+        throw new ConflictException('Email already exists');
+      }
+      // Re-throw if it's a different error
+      throw error;
+    }
+
+    // Fetch the saved user
+    const savedUser = await this.userRepository.findOne({
+      where: { id: userId },
     });
 
-    const savedUser = await this.userRepository.save(user);
+    if (!savedUser) {
+      throw new BadRequestException('Failed to create user');
+    }
 
-    // Create user profile
-    const profile = this.profileRepository.create({
+    // Create user profile using MongoDB manager
+    const profileData = {
+      _id: profileId,
+      id: profileId,
       userId: savedUser.id,
       name: savedUser.name,
       email: savedUser.email,
-    });
+      createdAt: now,
+      updatedAt: now,
+    };
 
-    await this.profileRepository.save(profile);
+    await mongoManager.getMongoRepository(UserProfile).insertOne(profileData);
 
     // Send verification email if enabled
     const emailVerificationEnabled = this.configService.get<boolean>(
@@ -190,19 +251,55 @@ export class AuthService {
       { used: true },
     );
 
-    // Create new token
-    const emailToken = this.emailTokenRepository.create({
+    // Create new token using MongoDB manager
+    const mongoManager = this.dataSource.mongoManager;
+    const tokenId = randomUUID();
+    const now = new Date();
+    const tokenData = {
+      _id: tokenId,
+      id: tokenId,
       userId,
       token,
       type: TokenType.EMAIL_VERIFICATION,
       expiresAt,
       used: false,
-    });
+      createdAt: now,
+    };
 
-    await this.emailTokenRepository.save(emailToken);
+    await mongoManager.getMongoRepository(EmailToken).insertOne(tokenData);
 
     // Send email
     await this.emailService.sendVerificationEmail(email, token, name);
+  }
+
+  async resendVerificationEmail(email: string) {
+    const user = await this.userRepository.findOne({
+      where: { email },
+    });
+
+    if (!user) {
+      // Don't reveal if user exists for security
+      return { message: 'If email exists, verification link has been sent' };
+    }
+
+    if (!user.isActive) {
+      // Don't reveal if user exists for security
+      return { message: 'If email exists, verification link has been sent' };
+    }
+
+    // Check if email is already verified
+    const userProfile = await this.profileRepository.findOne({
+      where: { userId: user.id },
+    });
+
+    if (userProfile && userProfile.emailVerified) {
+      return { message: 'Email is already verified' };
+    }
+
+    // Send verification email
+    await this.sendVerificationEmail(user.id, user.email, user.name);
+
+    return { message: 'If email exists, verification link has been sent' };
   }
 
   async changePassword(userId: string, changePasswordDto: ChangePasswordDto) {
@@ -258,16 +355,22 @@ export class AuthService {
       { used: true },
     );
 
-    // Create new token
-    const emailToken = this.emailTokenRepository.create({
+    // Create new token using MongoDB manager
+    const mongoManager = this.dataSource.mongoManager;
+    const tokenId = randomUUID();
+    const now = new Date();
+    const tokenData = {
+      _id: tokenId,
+      id: tokenId,
       userId: user.id,
       token,
       type: TokenType.PASSWORD_RESET,
       expiresAt,
       used: false,
-    });
+      createdAt: now,
+    };
 
-    await this.emailTokenRepository.save(emailToken);
+    await mongoManager.getMongoRepository(EmailToken).insertOne(tokenData);
 
     // Send email
     await this.emailService.sendPasswordResetEmail(
@@ -284,25 +387,56 @@ export class AuthService {
       where: {
         token,
         type: TokenType.EMAIL_VERIFICATION,
-        used: false,
       },
-      relations: ['user'],
     });
 
     if (!emailToken) {
       throw new BadRequestException('Invalid or expired verification token');
     }
 
+    // Check if email is already verified by checking user profile
+    const userProfile = await this.profileRepository.findOne({
+      where: { userId: emailToken.userId },
+    });
+
+    if (userProfile && userProfile.emailVerified) {
+      return { 
+        success: true,
+        message: 'Email is already verified' 
+      };
+    }
+
+    if (emailToken.used) {
+      return { 
+        success: true,
+        message: 'Email is already verified' 
+      };
+    }
+
     if (emailToken.expiresAt < new Date()) {
       throw new BadRequestException('Verification token has expired');
     }
 
-    // Mark token as used
-    emailToken.used = true;
-    await this.emailTokenRepository.save(emailToken);
+    // Mark token as used using update method for MongoDB compatibility
+    await this.emailTokenRepository.update(
+      { id: emailToken.id },
+      { used: true },
+    );
 
-    // TODO: Mark user as verified in user profile if needed
-    return { success: true };
+    // Mark user as verified in user profile
+    const now = new Date();
+    await this.profileRepository.update(
+      { userId: emailToken.userId },
+      {
+        emailVerified: true,
+        emailVerifiedAt: now,
+      },
+    );
+
+    return { 
+      success: true,
+      message: 'Email verified successfully' 
+    };
   }
 
   async resetPasswordWithToken(token: string, newPassword: string) {
@@ -312,7 +446,6 @@ export class AuthService {
         type: TokenType.PASSWORD_RESET,
         used: false,
       },
-      relations: ['user'],
     });
 
     if (!emailToken) {
@@ -323,9 +456,11 @@ export class AuthService {
       throw new BadRequestException('Reset token has expired');
     }
 
-    // Mark token as used
-    emailToken.used = true;
-    await this.emailTokenRepository.save(emailToken);
+    // Mark token as used using update method for MongoDB compatibility
+    await this.emailTokenRepository.update(
+      { id: emailToken.id },
+      { used: true },
+    );
 
     // Update password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
