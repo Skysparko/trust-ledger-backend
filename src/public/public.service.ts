@@ -26,27 +26,38 @@ export class PublicService {
     type?: IssuanceType;
     location?: string;
   }) {
-    const queryBuilder = this.issuanceRepository.createQueryBuilder('issuance');
+    // MongoDB doesn't support Query Builder, so we use find() and filter in memory
+    const allIssuances = await this.issuanceRepository.find();
+
+    let filteredIssuances = allIssuances;
 
     if (filters.status) {
-      queryBuilder.andWhere('issuance.status = :status', {
-        status: filters.status,
-      });
+      filteredIssuances = filteredIssuances.filter(
+        (issuance) => issuance.status === filters.status,
+      );
     }
 
     if (filters.type) {
-      queryBuilder.andWhere('issuance.type = :type', { type: filters.type });
+      filteredIssuances = filteredIssuances.filter(
+        (issuance) => issuance.type === filters.type,
+      );
     }
 
     if (filters.location) {
-      queryBuilder.andWhere('issuance.location LIKE :location', {
-        location: `%${filters.location}%`,
-      });
+      const locationLower = filters.location.toLowerCase();
+      filteredIssuances = filteredIssuances.filter((issuance) =>
+        issuance.location?.toLowerCase().includes(locationLower),
+      );
     }
 
-    queryBuilder.orderBy('issuance.startDate', 'DESC');
+    // Sort by startDate descending
+    filteredIssuances.sort((a, b) => {
+      const aDate = a.startDate?.getTime() || 0;
+      const bDate = b.startDate?.getTime() || 0;
+      return bDate - aDate;
+    });
 
-    return await queryBuilder.getMany();
+    return filteredIssuances;
   }
 
   async getIssuanceById(id: string) {
@@ -66,39 +77,60 @@ export class PublicService {
     status?: ProjectStatus;
     location?: string;
   }) {
-    const queryBuilder = this.projectRepository.createQueryBuilder('project');
+    // MongoDB doesn't support Query Builder, so we use find() and filter in memory
+    const allProjects = await this.projectRepository.find();
+
+    let filteredProjects = allProjects;
 
     if (filters.type) {
-      queryBuilder.andWhere('project.type = :type', { type: filters.type });
+      filteredProjects = filteredProjects.filter(
+        (project) => project.type === filters.type,
+      );
     }
 
     if (filters.status) {
-      queryBuilder.andWhere('project.status = :status', {
-        status: filters.status,
-      });
+      filteredProjects = filteredProjects.filter(
+        (project) => project.status === filters.status,
+      );
     }
 
     if (filters.location) {
-      queryBuilder.andWhere('project.location LIKE :location', {
-        location: `%${filters.location}%`,
-      });
+      const locationLower = filters.location.toLowerCase();
+      filteredProjects = filteredProjects.filter((project) =>
+        project.location?.toLowerCase().includes(locationLower),
+      );
     }
 
-    queryBuilder.orderBy('project.createdAt', 'DESC');
+    // Sort by createdAt descending
+    filteredProjects.sort((a, b) => {
+      const aDate = a.createdAt?.getTime() || 0;
+      const bDate = b.createdAt?.getTime() || 0;
+      return bDate - aDate;
+    });
 
-    return await queryBuilder.getMany();
+    return filteredProjects;
   }
 
   async getPosts(category?: PostCategory) {
-    const queryBuilder = this.postRepository.createQueryBuilder('post');
+    // MongoDB doesn't support Query Builder, so we use find() and filter in memory
+    const allPosts = await this.postRepository.find();
+
+    let filteredPosts = allPosts;
 
     if (category) {
-      queryBuilder.andWhere('post.category = :category', { category });
+      filteredPosts = filteredPosts.filter(
+        (post) => post.category === category,
+      );
     }
 
-    queryBuilder.orderBy('post.date', 'DESC');
+    // Sort by date descending
+    filteredPosts.sort((a, b) => {
+      const aDate = a.date?.getTime() || 0;
+      const bDate = b.date?.getTime() || 0;
+      return bDate - aDate;
+    });
 
-    return await queryBuilder.getMany();
+    return filteredPosts;
   }
 
   async getPostById(id: string) {

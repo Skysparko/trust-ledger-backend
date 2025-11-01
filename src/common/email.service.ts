@@ -20,8 +20,13 @@ export class EmailService {
 
   constructor(private configService: ConfigService) {
     const smtpHost = this.configService.get<string>('SMTP_HOST', 'smtp.gmail.com');
-    const smtpPort = this.configService.get<number>('SMTP_PORT', 587);
-    const smtpSecure = this.configService.get<boolean>('SMTP_SECURE', false);
+    // Ensure port is parsed as number, handle both string and number
+    const smtpPortRaw = this.configService.get<string | number>('SMTP_PORT', 587);
+    const smtpPort = typeof smtpPortRaw === 'string' ? parseInt(smtpPortRaw, 10) : smtpPortRaw;
+    const smtpSecureRaw = this.configService.get<string | boolean>('SMTP_SECURE', false);
+    const smtpSecure = typeof smtpSecureRaw === 'string' 
+      ? smtpSecureRaw.toLowerCase() === 'true' 
+      : smtpSecureRaw;
     
     // Support both EMAIL_USER/EMAIL_PASS and SMTP_USER/SMTP_PASSWORD
     const emailUser = this.configService.get<string>('EMAIL_USER');
@@ -43,7 +48,7 @@ export class EmailService {
     );
 
     if (smtpUser && smtpPassword) {
-      this.transporter = nodemailer.createTransport({
+      const transporterConfig: any = {
         host: smtpHost,
         port: smtpPort,
         secure: smtpSecure,
@@ -51,8 +56,27 @@ export class EmailService {
           user: smtpUser,
           pass: smtpPassword.replace(/\s+/g, ''), // Remove any spaces from app password
         },
-      });
-      this.logger.log('Email service initialized with SMTP configuration');
+      };
+
+      // For port 587 (STARTTLS), explicitly configure STARTTLS
+      // Port 587 uses STARTTLS: connection starts plain, then upgrades to TLS
+      if (smtpPort === 587) {
+        transporterConfig.secure = false; // Must be false - we start with plain connection
+        transporterConfig.requireTLS = true; // Require TLS upgrade via STARTTLS command
+        // Don't set ignoreTLS or tls options - let nodemailer handle STARTTLS negotiation
+      }
+
+      // For port 465 (SSL/TLS), ensure secure is true
+      if (smtpPort === 465) {
+        transporterConfig.secure = true;
+        transporterConfig.requireTLS = false;
+        transporterConfig.ignoreTLS = true;
+      }
+
+      this.transporter = nodemailer.createTransport(transporterConfig);
+      this.logger.log(
+        `Email service initialized with SMTP configuration: ${smtpHost}:${smtpPort} (secure: ${smtpSecure})`,
+      );
     } else {
       this.logger.warn(
         'SMTP credentials not configured. Email service will use console logging.',
