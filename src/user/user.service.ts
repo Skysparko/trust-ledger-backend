@@ -1,0 +1,340 @@
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
+import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
+import { Repository, DataSource } from 'typeorm';
+import { randomUUID } from 'crypto';
+import { User } from '../entities/user.entity';
+import { UserProfile, KYCStatus, WalletNetwork } from '../entities/user-profile.entity';
+import { Investment, InvestmentStatus } from '../entities/investment.entity';
+import { Transaction, TransactionType, TransactionStatus } from '../entities/transaction.entity';
+import { Asset } from '../entities/asset.entity';
+import { Notification } from '../entities/notification.entity';
+import { Issuance, IssuanceStatus } from '../entities/issuance.entity';
+import { UpdateProfileDto } from '../dto/user/update-profile.dto';
+import { CreateInvestmentDto } from '../dto/user/create-investment.dto';
+import { PaymentMethod } from '../entities/investment.entity';
+import { FileUploadService } from '../common/file-upload.service';
+
+@Injectable()
+export class UserService {
+  constructor(
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+    @InjectRepository(UserProfile)
+    private profileRepository: Repository<UserProfile>,
+    @InjectRepository(Investment)
+    private investmentRepository: Repository<Investment>,
+    @InjectRepository(Transaction)
+    private transactionRepository: Repository<Transaction>,
+    @InjectRepository(Asset)
+    private assetRepository: Repository<Asset>,
+    @InjectRepository(Notification)
+    private notificationRepository: Repository<Notification>,
+    @InjectRepository(Issuance)
+    private issuanceRepository: Repository<Issuance>,
+    private fileUploadService: FileUploadService,
+    @InjectDataSource()
+    private dataSource: DataSource,
+  ) {}
+
+  /**
+   * Get or create a user profile. Auto-creates profile if it doesn't exist.
+   */
+  private async getOrCreateProfile(userId: string): Promise<UserProfile> {
+    let profile = await this.profileRepository.findOne({
+      where: { userId },
+    });
+
+    if (!profile) {
+      // Auto-create profile if it doesn't exist
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+        select: ['id', 'name', 'email'],
+      });
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      // Use direct instantiation for MongoDB compatibility
+      const newProfile = new UserProfile();
+      newProfile.userId = user.id;
+      newProfile.name = user.name;
+      newProfile.email = user.email;
+
+      await this.profileRepository.save(newProfile);
+
+      // Fetch the saved profile from database to ensure proper metadata
+      profile = await this.profileRepository.findOne({
+        where: { userId },
+      });
+
+      if (!profile) {
+        throw new NotFoundException('Failed to create profile');
+      }
+    }
+
+    return profile;
+  }
+
+  async getProfile(userId: string) {
+    return this.getOrCreateProfile(userId);
+  }
+
+  async updateProfile(userId: string, updateProfileDto: UpdateProfileDto) {
+    const profile = await this.getOrCreateProfile(userId);
+    
+    // Filter out undefined values and use update method for MongoDB compatibility
+    const updateData: Partial<UserProfile> = {};
+    if (updateProfileDto.name !== undefined) updateData.name = updateProfileDto.name;
+    if (updateProfileDto.email !== undefined) updateData.email = updateProfileDto.email;
+    if (updateProfileDto.phone !== undefined) updateData.phone = updateProfileDto.phone;
+    if (updateProfileDto.bank !== undefined) updateData.bank = updateProfileDto.bank as any;
+    if (updateProfileDto.walletAddress !== undefined) updateData.walletAddress = updateProfileDto.walletAddress;
+    if (updateProfileDto.walletNetwork !== undefined) updateData.walletNetwork = updateProfileDto.walletNetwork as WalletNetwork;
+    
+    await this.profileRepository.update({ id: profile.id }, updateData);
+    
+    // Fetch and return updated profile
+    return await this.profileRepository.findOne({
+      where: { id: profile.id },
+    });
+  }
+
+  async uploadKYC(userId: string, file: Express.Multer.File) {
+    const profile = await this.getOrCreateProfile(userId);
+
+    // Validate file
+    this.fileUploadService.validateFile(file, {
+      maxSize: 10 * 1024 * 1024, // 10MB
+      allowedMimeTypes: ['image/jpeg', 'image/png', 'application/pdf'],
+    });
+
+    // Save file
+    const { url } = await this.fileUploadService.saveFile(file, 'kyc');
+
+    // Use update method for MongoDB compatibility
+    await this.profileRepository.update(
+      { id: profile.id },
+      {
+        kycDocumentName: file.originalname,
+        kycDocumentUrl: url,
+        kycStatus: KYCStatus.PENDING,
+      },
+    );
+
+    // Fetch and return updated profile
+    return await this.profileRepository.findOne({
+      where: { id: profile.id },
+    });
+  }
+
+  async signAgreement(userId: string) {
+    const profile = await this.getOrCreateProfile(userId);
+
+    // Use update method for MongoDB compatibility
+    await this.profileRepository.update(
+      { id: profile.id },
+      {
+        agreementSigned: true,
+        agreementSignedAt: new Date(),
+      },
+    );
+
+    // Fetch and return updated profile
+    return await this.profileRepository.findOne({
+      where: { id: profile.id },
+    });
+  }
+
+  async toggleTwoFactor(userId: string, enabled: boolean) {
+    const profile = await this.getOrCreateProfile(userId);
+
+    // Use update method for MongoDB compatibility
+    await this.profileRepository.update(
+      { id: profile.id },
+      {
+        twoFactorEnabled: enabled,
+      },
+    );
+
+    // TODO: Generate recovery codes when enabling
+    const recoveryCodes = enabled ? ['code1', 'code2', 'code3'] : undefined;
+
+    return {
+      enabled,
+      recoveryCodes,
+    };
+  }
+
+  async updateWallet(
+    userId: string,
+    walletAddress: string,
+    walletNetwork: WalletNetwork,
+  ) {
+    const profile = await this.getOrCreateProfile(userId);
+
+    // Use update method for MongoDB compatibility
+    await this.profileRepository.update(
+      { id: profile.id },
+      {
+        walletAddress,
+        walletNetwork,
+      },
+    );
+
+    // Fetch and return updated profile
+    return await this.profileRepository.findOne({
+      where: { id: profile.id },
+    });
+  }
+
+  async createInvestment(userId: string, createInvestmentDto: CreateInvestmentDto) {
+    const issuance = await this.issuanceRepository.findOne({
+      where: { id: createInvestmentDto.issuanceId },
+    });
+
+    if (!issuance) {
+      throw new NotFoundException('Issuance not found');
+    }
+
+    if (issuance.status !== IssuanceStatus.OPEN) {
+      throw new BadRequestException('Issuance is not open for investment');
+    }
+
+    // Calculate amount: €100 per bond (default)
+    const amount = createInvestmentDto.bonds * 100;
+
+    if (amount < Number(issuance.minInvestment)) {
+      throw new BadRequestException(
+        `Minimum investment is €${issuance.minInvestment}`,
+      );
+    }
+
+    if (issuance.maxInvestment && amount > Number(issuance.maxInvestment)) {
+      throw new BadRequestException(
+        `Maximum investment is €${issuance.maxInvestment}`,
+      );
+    }
+
+    const newFunding = Number(issuance.currentFunding) + amount;
+    if (newFunding > Number(issuance.totalFundingTarget)) {
+      throw new BadRequestException('Investment exceeds funding target');
+    }
+
+    // Generate IDs manually for MongoDB compatibility
+    const investmentId = randomUUID();
+    const transactionId = randomUUID();
+    const now = new Date();
+    
+    // Use MongoDB manager's native insertOne to avoid relation metadata issues
+    const mongoManager = this.dataSource.mongoManager;
+    
+    // Create investment using MongoDB manager
+    const investmentData = {
+      _id: investmentId,
+      id: investmentId,
+      userId,
+      issuanceId: createInvestmentDto.issuanceId,
+      date: now,
+      amount,
+      bonds: createInvestmentDto.bonds,
+      paymentMethod: createInvestmentDto.paymentMethod,
+      status: InvestmentStatus.PENDING,
+      createdAt: now,
+      updatedAt: now,
+    };
+    
+    await mongoManager.getMongoRepository(Investment).insertOne(investmentData);
+
+    // Create transaction using MongoDB manager
+    const transactionData = {
+      _id: transactionId,
+      id: transactionId,
+      userId,
+      date: now,
+      type: TransactionType.INVESTMENT,
+      amount: -amount, // Negative for investment
+      currency: 'EUR',
+      status: TransactionStatus.PENDING,
+      reference: `TXN-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 1000000)).padStart(6, '0')}`,
+      investmentId: investmentId,
+      createdAt: now,
+      updatedAt: now,
+    };
+    
+    await mongoManager.getMongoRepository(Transaction).insertOne(transactionData);
+
+    // Fetch and return the created investment
+    return await this.investmentRepository.findOne({
+      where: { id: investmentId },
+    });
+  }
+
+  async getInvestments(userId: string) {
+    return await this.investmentRepository.find({
+      where: { userId },
+      relations: ['issuance'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async getTransactions(userId: string, type?: string, status?: string) {
+    // Build where clause for MongoDB
+    const where: any = { userId };
+
+    if (type && type !== 'all') {
+      where.type = type;
+    }
+
+    if (status && status !== 'all') {
+      where.status = status;
+    }
+
+    return await this.transactionRepository.find({
+      where,
+      order: { date: 'DESC' },
+    });
+  }
+
+  async getAssets(userId: string) {
+    return await this.assetRepository.find({
+      where: { userId },
+      relations: ['issuance'],
+      order: { dateAcquired: 'DESC' },
+    });
+  }
+
+  async getNotifications(userId: string) {
+    return await this.notificationRepository.find({
+      where: { userId },
+      order: { date: 'DESC' },
+    });
+  }
+
+  async markNotificationRead(userId: string, notificationId: string) {
+    const notification = await this.notificationRepository.findOne({
+      where: { id: notificationId, userId },
+    });
+
+    if (!notification) {
+      throw new NotFoundException('Notification not found');
+    }
+
+    notification.read = true;
+    return await this.notificationRepository.save(notification);
+  }
+
+  async markAllNotificationsRead(userId: string) {
+    await this.notificationRepository.update(
+      { userId, read: false },
+      { read: true },
+    );
+
+    return { success: true };
+  }
+}
+

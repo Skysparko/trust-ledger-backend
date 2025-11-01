@@ -1,0 +1,37 @@
+# Database Configuration (MongoDB)
+MONGODB_URI=mongodb+srv://shubhamrakhecha5_db_user:yIMmDbng1DWULd00@trustledger.llkjm9q.mongodb.net/?appName=trustledger
+DB_NAME=trust_ledger
+
+# JWT Configuration
+JWT_SECRET=your-secret-key-change-in-production-minimum-32-characters
+JWT_EXPIRES_IN=7d
+
+# Server Configuration
+PORT=3000
+NODE_ENV=development
+CORS_ORIGIN=*
+
+# File Upload Configuration
+UPLOAD_DIR=./uploads
+MAX_FILE_SIZE=10485760
+
+# Email Configuration (SMTP - Gmail)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+EMAIL_USER=shubhamrakhecha5@gmail.com
+EMAIL_PASS=adqv ybmo qoju tlql
+EMAIL_FROM=shubhamrakhecha5@gmail.com
+SMTP_FROM_NAME=TrustLedger
+
+# Application URLs
+FRONTEND_URL=http://localhost:3001
+API_URL=http://localhost:3000
+
+# Email Verification
+EMAIL_VERIFICATION_ENABLED=true
+EMAIL_VERIFICATION_TOKEN_EXPIRY=24
+
+# Password Reset
+PASSWORD_RESET_TOKEN_EXPIRY=1
+
