@@ -13,6 +13,8 @@ import { Webinar } from '../entities/webinar.entity';
 import { Post } from '../entities/post.entity';
 import { Asset } from '../entities/asset.entity';
 import { Notification } from '../entities/notification.entity';
+import { InvestmentOpportunity } from '../entities/investment-opportunity.entity';
+import { InvestmentOpportunityDocument } from '../entities/investment-opportunity-document.entity';
 
 export const getTypeOrmConfig = (
   configService: ConfigService,
@@ -73,6 +75,8 @@ export const getTypeOrmConfig = (
       Post,
       Asset,
       Notification,
+      InvestmentOpportunity,
+      InvestmentOpportunityDocument,
     ],
     synchronize: configService.get<string>('DB_SYNCHRONIZE', 'false') === 'true',
     logging: configService.get<string>('DB_LOGGING', 'false') === 'true',

@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { AdminModule } from './admin/admin.module';
 import { PublicModule } from './public/public.module';
+import { InvestmentOpportunityModule } from './investment-opportunity/investment-opportunity.module';
 import { getDatabaseConfig } from './config/database.config';
 import { getTypeOrmConfig } from './config/typeorm.config';
 
@@ -31,6 +32,7 @@ import { getTypeOrmConfig } from './config/typeorm.config';
     UserModule,
     AdminModule,
     PublicModule,
+    InvestmentOpportunityModule,
   ],
   controllers: [AppController],
   providers: [AppService],
