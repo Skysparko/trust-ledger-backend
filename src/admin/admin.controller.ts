@@ -45,14 +45,25 @@ export class AdminController {
   @Get('users')
   async getUsers(
     @Query('search') search?: string,
-    @Query('kycStatus') kycStatus?: KYCStatus,
+    @Query('kycStatus') kycStatus?: string,
     @Query('isActive') isActive?: string,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
   ) {
+    // Normalize kycStatus to enum value (handle both case and string matching)
+    let normalizedKycStatus: KYCStatus | undefined;
+    if (kycStatus) {
+      const lowerStatus = kycStatus.toLowerCase();
+      // Match enum values: 'pending', 'approved', 'rejected'
+      const validStatuses = Object.values(KYCStatus) as string[];
+      if (validStatuses.includes(lowerStatus)) {
+        normalizedKycStatus = lowerStatus as KYCStatus;
+      }
+    }
+
     return this.adminService.getUsers({
       search,
-      kycStatus,
+      kycStatus: normalizedKycStatus,
       isActive: isActive === undefined ? undefined : isActive === 'true',
       page: page ? Number(page) : 1,
       limit: limit ? Number(limit) : 10,

@@ -131,7 +131,9 @@ export class AdminService {
       // Filter by KYC status
       if (filters.kycStatus) {
         const profile = profileMap.get(user.id);
-        if (!profile || profile.kycStatus !== filters.kycStatus) {
+        // Users without profiles default to PENDING status (as shown in the response mapping)
+        const userKycStatus = profile?.kycStatus || KYCStatus.PENDING;
+        if (userKycStatus !== filters.kycStatus) {
           return false;
         }
       }
