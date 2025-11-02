@@ -89,15 +89,41 @@ export class AdminController {
   @Get('transactions')
   async getTransactions(
     @Query('search') search?: string,
-    @Query('status') status?: TransactionStatus,
-    @Query('paymentMethod') paymentMethod?: PaymentMethod,
+    @Query('status') status?: string,
+    @Query('paymentMethod') paymentMethod?: string,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
   ) {
+    // Normalize status to enum value (handle case and alias 'confirmed' -> 'completed')
+    let normalizedStatus: TransactionStatus | undefined;
+    if (status) {
+      const lowerStatus = status.toLowerCase();
+      // Map 'confirmed' alias to 'completed' for convenience
+      if (lowerStatus === 'confirmed' || lowerStatus === 'complete') {
+        normalizedStatus = TransactionStatus.COMPLETED;
+      } else {
+        // Check if the status matches any enum value (case-insensitive)
+        const validStatuses = Object.values(TransactionStatus) as string[];
+        if (validStatuses.includes(lowerStatus)) {
+          normalizedStatus = lowerStatus as TransactionStatus;
+        }
+      }
+    }
+
+    // Normalize paymentMethod to enum value
+    let normalizedPaymentMethod: PaymentMethod | undefined;
+    if (paymentMethod) {
+      const lowerPaymentMethod = paymentMethod.toLowerCase();
+      const validPaymentMethods = Object.values(PaymentMethod) as string[];
+      if (validPaymentMethods.includes(lowerPaymentMethod)) {
+        normalizedPaymentMethod = lowerPaymentMethod as PaymentMethod;
+      }
+    }
+
     return this.adminService.getTransactions({
       search,
-      status,
-      paymentMethod,
+      status: normalizedStatus,
+      paymentMethod: normalizedPaymentMethod,
       page: page ? Number(page) : 1,
       limit: limit ? Number(limit) : 10,
     });
