@@ -3,7 +3,7 @@ import { PaymentMethod } from '../../entities/investment.entity';
 
 export class CreateInvestmentDto {
   @IsString()
-  issuanceId: string;
+  investmentOpportunityId: string;
 
   @IsNumber()
   @Min(1)

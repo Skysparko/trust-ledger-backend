@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { User } from './user.entity';
-import { Issuance } from './issuance.entity';
+import { InvestmentOpportunity } from './investment-opportunity.entity';
 
 export enum InvestmentStatus {
   PENDING = 'pending',
@@ -35,12 +35,12 @@ export class Investment {
   @Column()
   userId: string;
 
-  @ManyToOne(() => Issuance, (issuance) => issuance.investments)
+  @ManyToOne(() => InvestmentOpportunity)
   @JoinColumn()
-  issuance: Issuance;
+  investmentOpportunity: InvestmentOpportunity;
 
   @Column()
-  issuanceId: string;
+  investmentOpportunityId: string;
 
   @Column()
   date: Date;

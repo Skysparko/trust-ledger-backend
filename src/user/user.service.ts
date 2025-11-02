@@ -12,7 +12,7 @@ import { Investment, InvestmentStatus } from '../entities/investment.entity';
 import { Transaction, TransactionType, TransactionStatus } from '../entities/transaction.entity';
 import { Asset } from '../entities/asset.entity';
 import { Notification } from '../entities/notification.entity';
-import { Issuance, IssuanceStatus } from '../entities/issuance.entity';
+import { InvestmentOpportunity, InvestmentOpportunityStatus } from '../entities/investment-opportunity.entity';
 import { UpdateProfileDto } from '../dto/user/update-profile.dto';
 import { CreateInvestmentDto } from '../dto/user/create-investment.dto';
 import { PaymentMethod } from '../entities/investment.entity';
@@ -33,8 +33,8 @@ export class UserService {
     private assetRepository: Repository<Asset>,
     @InjectRepository(Notification)
     private notificationRepository: Repository<Notification>,
-    @InjectRepository(Issuance)
-    private issuanceRepository: Repository<Issuance>,
+    @InjectRepository(InvestmentOpportunity)
+    private investmentOpportunityRepository: Repository<InvestmentOpportunity>,
     private fileUploadService: FileUploadService,
     @InjectDataSource()
     private dataSource: DataSource,
@@ -193,35 +193,35 @@ export class UserService {
   }
 
   async createInvestment(userId: string, createInvestmentDto: CreateInvestmentDto) {
-    const issuance = await this.issuanceRepository.findOne({
-      where: { id: createInvestmentDto.issuanceId },
+    const investmentOpportunity = await this.investmentOpportunityRepository.findOne({
+      where: { id: createInvestmentDto.investmentOpportunityId },
     });
 
-    if (!issuance) {
-      throw new NotFoundException('Issuance not found');
+    if (!investmentOpportunity) {
+      throw new NotFoundException('Investment opportunity not found');
     }
 
-    if (issuance.status !== IssuanceStatus.OPEN) {
-      throw new BadRequestException('Issuance is not open for investment');
+    if (investmentOpportunity.status !== InvestmentOpportunityStatus.ACTIVE) {
+      throw new BadRequestException('Investment opportunity is not active for investment');
     }
 
     // Calculate amount: €100 per bond (default)
     const amount = createInvestmentDto.bonds * 100;
 
-    if (amount < Number(issuance.minInvestment)) {
+    if (amount < Number(investmentOpportunity.minInvestment)) {
       throw new BadRequestException(
-        `Minimum investment is €${issuance.minInvestment}`,
+        `Minimum investment is €${investmentOpportunity.minInvestment}`,
       );
     }
 
-    if (issuance.maxInvestment && amount > Number(issuance.maxInvestment)) {
+    if (investmentOpportunity.maxInvestment && amount > Number(investmentOpportunity.maxInvestment)) {
       throw new BadRequestException(
-        `Maximum investment is €${issuance.maxInvestment}`,
+        `Maximum investment is €${investmentOpportunity.maxInvestment}`,
       );
     }
 
-    const newFunding = Number(issuance.currentFunding) + amount;
-    if (newFunding > Number(issuance.totalFundingTarget)) {
+    const newFunding = Number(investmentOpportunity.currentFunding) + amount;
+    if (newFunding > Number(investmentOpportunity.totalFundingTarget)) {
       throw new BadRequestException('Investment exceeds funding target');
     }
 
@@ -238,7 +238,7 @@ export class UserService {
       _id: investmentId,
       id: investmentId,
       userId,
-      issuanceId: createInvestmentDto.issuanceId,
+      investmentOpportunityId: createInvestmentDto.investmentOpportunityId,
       date: now,
       amount,
       bonds: createInvestmentDto.bonds,
@@ -277,7 +277,7 @@ export class UserService {
   async getInvestments(userId: string) {
     return await this.investmentRepository.find({
       where: { userId },
-      relations: ['issuance'],
+      relations: ['investmentOpportunity'],
       order: { createdAt: 'DESC' },
     });
   }
@@ -303,7 +303,7 @@ export class UserService {
   async getAssets(userId: string) {
     return await this.assetRepository.find({
       where: { userId },
-      relations: ['issuance'],
+      relations: ['investmentOpportunity'],
       order: { dateAcquired: 'DESC' },
     });
   }

@@ -12,6 +12,7 @@ import { Investment, InvestmentStatus } from '../entities/investment.entity';
 import { Transaction, TransactionStatus, TransactionType } from '../entities/transaction.entity';
 import { PaymentMethod } from '../entities/investment.entity';
 import { Issuance, IssuanceStatus } from '../entities/issuance.entity';
+import { InvestmentOpportunity } from '../entities/investment-opportunity.entity';
 import { Project, ProjectStatus } from '../entities/project.entity';
 import { Document, DocumentCategory, DocumentType } from '../entities/document.entity';
 import { Webinar } from '../entities/webinar.entity';
@@ -35,6 +36,8 @@ export class AdminService {
     private transactionRepository: Repository<Transaction>,
     @InjectRepository(Issuance)
     private issuanceRepository: Repository<Issuance>,
+    @InjectRepository(InvestmentOpportunity)
+    private investmentOpportunityRepository: Repository<InvestmentOpportunity>,
     @InjectRepository(Project)
     private projectRepository: Repository<Project>,
     @InjectRepository(Document)
@@ -217,29 +220,34 @@ export class AdminService {
     const skip = (page - 1) * limit;
 
     // Fetch all transactions, users, investments, and issuances
-    const [allTransactions, allUsers, allInvestments, allIssuances] = await Promise.all([
+    const [allTransactions, allUsers, allInvestments, allIssuances, allInvestmentOpportunities] = await Promise.all([
       this.transactionRepository.find(),
       this.userRepository.find(),
       this.investmentRepository.find(),
       this.issuanceRepository.find(),
+      this.investmentOpportunityRepository.find(),
     ]);
 
     // Build maps for joins
     const userMap = new Map(allUsers.map((u) => [u.id, u]));
     const investmentMap = new Map(allInvestments.map((i) => [i.id, i]));
     const issuanceMap = new Map(allIssuances.map((i) => [i.id, i]));
+    const investmentOpportunityMap = new Map(allInvestmentOpportunities.map((io) => [io.id, io]));
 
     // Enrich transactions with related data and filter
     let enrichedTransactions = allTransactions.map((t) => {
       const user = t.userId ? userMap.get(t.userId) : null;
       const investment = t.investmentId ? investmentMap.get(t.investmentId) : null;
-      const issuance = investment?.issuanceId ? issuanceMap.get(investment.issuanceId) : null;
+      // Keep issuance for backward compatibility with legacy data
+      const issuance = null; // Legacy investments might have issuanceId, but new ones use investmentOpportunityId
+      const investmentOpportunity = investment?.investmentOpportunityId ? investmentOpportunityMap.get(investment.investmentOpportunityId) : null;
 
       return {
         transaction: t,
         user,
         investment,
         issuance,
+        investmentOpportunity,
       };
     });
 
@@ -263,7 +271,7 @@ export class AdminService {
       enrichedTransactions = enrichedTransactions.filter((item) => {
         const nameMatch = item.user?.name?.toLowerCase().includes(searchLower);
         const emailMatch = item.user?.email?.toLowerCase().includes(searchLower);
-        const titleMatch = item.issuance?.title?.toLowerCase().includes(searchLower);
+        const titleMatch = item.investmentOpportunity?.title?.toLowerCase().includes(searchLower);
         return nameMatch || emailMatch || titleMatch;
       });
     }
@@ -283,7 +291,8 @@ export class AdminService {
       transactions: paginated.map((item) => ({
         id: item.transaction.id,
         user: item.user ? { name: item.user.name, email: item.user.email } : null,
-        issuance: item.issuance ? { title: item.issuance.title } : null,
+        issuance: null, // Legacy field for backward compatibility (no longer used)
+        investmentOpportunity: item.investmentOpportunity ? { title: item.investmentOpportunity.title } : null,
         amount: item.transaction.amount,
         status: item.transaction.status,
         paymentMethod: item.transaction.paymentMethod,

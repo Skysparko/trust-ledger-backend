@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { User } from './user.entity';
-import { Issuance } from './issuance.entity';
+import { InvestmentOpportunity } from './investment-opportunity.entity';
 
 export enum AssetType {
   ENERGY_TOKEN = 'Energy Token',
@@ -43,12 +43,12 @@ export class Asset {
   @Column()
   dateAcquired: Date;
 
-  @ManyToOne(() => Issuance, { nullable: true })
+  @ManyToOne(() => InvestmentOpportunity, { nullable: true })
   @JoinColumn()
-  issuance: Issuance;
+  investmentOpportunity: InvestmentOpportunity;
 
   @Column({ nullable: true })
-  issuanceId: string;
+  investmentOpportunityId: string;
 
   @Column({ nullable: true })
   createdAt: Date;

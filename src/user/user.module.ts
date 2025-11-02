@@ -8,7 +8,7 @@ import { Investment } from '../entities/investment.entity';
 import { Transaction } from '../entities/transaction.entity';
 import { Asset } from '../entities/asset.entity';
 import { Notification } from '../entities/notification.entity';
-import { Issuance } from '../entities/issuance.entity';
+import { InvestmentOpportunity } from '../entities/investment-opportunity.entity';
 import { FileUploadService } from '../common/file-upload.service';
 
 @Module({
@@ -20,7 +20,7 @@ import { FileUploadService } from '../common/file-upload.service';
       Transaction,
       Asset,
       Notification,
-      Issuance,
+      InvestmentOpportunity,
     ]),
   ],
   controllers: [UserController],

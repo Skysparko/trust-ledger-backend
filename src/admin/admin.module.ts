@@ -6,6 +6,7 @@ import { User } from '../entities/user.entity';
 import { UserProfile } from '../entities/user-profile.entity';
 import { Investment } from '../entities/investment.entity';
 import { Transaction } from '../entities/transaction.entity';
+import { InvestmentOpportunity } from '../entities/investment-opportunity.entity';
 import { Issuance } from '../entities/issuance.entity';
 import { Project } from '../entities/project.entity';
 import { Document } from '../entities/document.entity';
@@ -23,6 +24,7 @@ import { Asset } from '../entities/asset.entity';
       UserProfile,
       Investment,
       Transaction,
+      InvestmentOpportunity,
       Issuance,
       Project,
       Document,

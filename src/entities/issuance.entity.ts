@@ -4,12 +4,9 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
-  OneToMany,
   BeforeInsert,
 } from 'typeorm';
 import { randomUUID } from 'crypto';
-import { Investment } from './investment.entity';
-import { Asset } from './asset.entity';
 
 export enum IssuanceType {
   WIND = 'Wind',
@@ -126,10 +123,12 @@ export class Issuance {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @OneToMany(() => Investment, (investment) => investment.issuance)
-  investments: Investment[];
+  // Note: Investments and Assets now reference InvestmentOpportunity instead of Issuance
+  // Keeping these relationships commented out for reference but they are no longer used
+  // @OneToMany(() => Investment, (investment) => investment.issuance)
+  // investments: Investment[];
 
-  @OneToMany(() => Asset, (asset) => asset.issuance)
-  assets: Asset[];
+  // @OneToMany(() => Asset, (asset) => asset.issuance)
+  // assets: Asset[];
 }
 

@@ -331,7 +331,7 @@ export class EmailService {
     investment: {
       amount: number;
       bonds: number;
-      issuance: string;
+      investmentOpportunity: string;
     },
   ): Promise<void> {
     const html = `
@@ -361,8 +361,8 @@ export class EmailService {
               <div class="investment-details">
                 <h3>Investment Details</h3>
                 <div class="detail-row">
-                  <span class="detail-label">Issuance:</span>
-                  <span>${investment.issuance}</span>
+                  <span class="detail-label">Investment Opportunity:</span>
+                  <span>${investment.investmentOpportunity}</span>
                 </div>
                 <div class="detail-row">
                   <span class="detail-label">Number of Bonds:</span>
