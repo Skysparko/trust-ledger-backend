@@ -16,6 +16,7 @@ import { FileUploadService } from '../common/file-upload.service';
 import { InvestmentConfirmationService } from './investment-confirmation.service';
 import { EmailService } from '../common/email.service';
 import { Asset } from '../entities/asset.entity';
+import { BlockchainModule } from '../blockchain/blockchain.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { Asset } from '../entities/asset.entity';
       Post,
       Asset,
     ]),
+    BlockchainModule,
   ],
   controllers: [AdminController],
   providers: [

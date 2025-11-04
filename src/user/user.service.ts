@@ -17,6 +17,7 @@ import { UpdateProfileDto } from '../dto/user/update-profile.dto';
 import { CreateInvestmentDto } from '../dto/user/create-investment.dto';
 import { PaymentMethod } from '../entities/investment.entity';
 import { FileUploadService } from '../common/file-upload.service';
+import { BlockchainService } from '../blockchain/blockchain.service';
 
 @Injectable()
 export class UserService {
@@ -36,6 +37,7 @@ export class UserService {
     @InjectRepository(InvestmentOpportunity)
     private investmentOpportunityRepository: Repository<InvestmentOpportunity>,
     private fileUploadService: FileUploadService,
+    private blockchainService: BlockchainService,
     @InjectDataSource()
     private dataSource: DataSource,
   ) {}
@@ -267,6 +269,63 @@ export class UserService {
     };
     
     await mongoManager.getMongoRepository(Transaction).insertOne(transactionData);
+
+    // Mint bonds on blockchain if contract is deployed and wallet address is provided
+    let mintTxHash: string | null = null;
+    let walletAddress: string | null = null;
+
+    if (investmentOpportunity.contractAddress) {
+      // Get wallet address from DTO or user profile
+      const profile = await this.getOrCreateProfile(userId);
+      walletAddress = createInvestmentDto.walletAddress || profile.walletAddress || null;
+
+      if (walletAddress) {
+        try {
+          // Mint bonds on-chain (mock payment - no actual payment processing)
+          const mintResult = await this.blockchainService.mintBonds(
+            investmentOpportunity.contractAddress,
+            walletAddress,
+            createInvestmentDto.bonds,
+          );
+          mintTxHash = mintResult.transactionHash;
+
+          // Update investment with blockchain info
+          await mongoManager.getMongoRepository(Investment).updateOne(
+            { id: investmentId },
+            {
+              $set: {
+                mintTxHash,
+                walletAddress,
+                status: InvestmentStatus.CONFIRMED, // Auto-confirm for mock payments
+              },
+            },
+          );
+
+          // Update transaction status
+          await mongoManager.getMongoRepository(Transaction).updateOne(
+            { id: transactionId },
+            {
+              $set: {
+                status: TransactionStatus.COMPLETED,
+              },
+            },
+          );
+
+          // Update opportunity funding
+          await mongoManager.getMongoRepository(InvestmentOpportunity).updateOne(
+            { id: investmentOpportunity.id },
+            {
+              $set: {
+                currentFunding: newFunding,
+              },
+            },
+          );
+        } catch (error) {
+          // Log error but don't fail the investment creation
+          console.error('Failed to mint bonds on blockchain:', error);
+        }
+      }
+    }
 
     // Fetch and return the created investment
     return await this.investmentRepository.findOne({

@@ -207,6 +207,13 @@ export class InvestmentOpportunity {
   @Column('text', { nullable: true })
   seoDescription: string;
 
+  // Blockchain
+  @Column({ nullable: true })
+  contractAddress: string; // BondToken contract address on Sonic
+
+  @Column({ nullable: true })
+  contractDeploymentTx: string; // Transaction hash of contract deployment
+
   // Metadata
   @Column({ nullable: true })
   createdBy: string; // Admin ID
