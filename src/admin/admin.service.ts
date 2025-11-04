@@ -720,6 +720,7 @@ export class AdminService {
       id: webinarId,
       ...createWebinarDto,
       date: new Date(createWebinarDto.date),
+      isActive: createWebinarDto.isActive !== undefined ? createWebinarDto.isActive : true,
       createdAt: now,
       updatedAt: now,
     };

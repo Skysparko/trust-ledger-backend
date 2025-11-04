@@ -156,6 +156,7 @@ export class PublicService {
 
   async getWebinars() {
     return await this.webinarRepository.find({
+      where: { isActive: true },
       order: { date: 'DESC' },
     });
   }

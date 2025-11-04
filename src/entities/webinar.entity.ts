@@ -18,7 +18,7 @@ export class Webinar {
   @Column()
   date: Date;
 
-  @Column()
+  @Column({ nullable: true })
   speaker: string;
 
   @Column({ nullable: true })
@@ -26,6 +26,12 @@ export class Webinar {
 
   @Column({ nullable: true })
   link: string;
+
+  @Column({ nullable: true })
+  duration: number;
+
+  @Column({ default: true })
+  isActive: boolean;
 
   @Column({ nullable: true })
   createdAt: Date;
