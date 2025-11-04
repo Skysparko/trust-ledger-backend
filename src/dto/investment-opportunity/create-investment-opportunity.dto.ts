@@ -129,7 +129,7 @@ export class CreateInvestmentOpportunityDto {
   @IsOptional()
   companyDescription?: string;
 
-  @IsUrl()
+  @IsUrl({ require_tld: false })
   @IsOptional()
   companyWebsite?: string;
 
@@ -164,20 +164,20 @@ export class CreateInvestmentOpportunityDto {
   jurisdiction?: string;
 
   // Media
-  @IsUrl()
+  @IsUrl({ require_tld: false })
   @IsOptional()
   thumbnailImage?: string;
 
-  @IsUrl()
+  @IsUrl({ require_tld: false })
   @IsOptional()
   logo?: string;
 
   @IsArray()
-  @IsUrl({}, { each: true })
+  @IsUrl({ require_tld: false }, { each: true })
   @IsOptional()
   images?: string[];
 
-  @IsUrl()
+  @IsUrl({ require_tld: false })
   @IsOptional()
   videoUrl?: string;
 
