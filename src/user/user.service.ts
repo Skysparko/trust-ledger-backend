@@ -207,18 +207,18 @@ export class UserService {
       throw new BadRequestException('Investment opportunity is not active for investment');
     }
 
-    // Calculate amount: €100 per bond (default)
+    // Calculate amount: $100 per bond (default)
     const amount = createInvestmentDto.bonds * 100;
 
     if (amount < Number(investmentOpportunity.minInvestment)) {
       throw new BadRequestException(
-        `Minimum investment is €${investmentOpportunity.minInvestment}`,
+        `Minimum investment is $${investmentOpportunity.minInvestment}`,
       );
     }
 
     if (investmentOpportunity.maxInvestment && amount > Number(investmentOpportunity.maxInvestment)) {
       throw new BadRequestException(
-        `Maximum investment is €${investmentOpportunity.maxInvestment}`,
+        `Maximum investment is $${investmentOpportunity.maxInvestment}`,
       );
     }
 
@@ -260,7 +260,7 @@ export class UserService {
       date: now,
       type: TransactionType.INVESTMENT,
       amount: -amount, // Negative for investment
-      currency: 'EUR',
+      currency: 'USD',
       status: TransactionStatus.PENDING,
       reference: `TXN-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 1000000)).padStart(6, '0')}`,
       investmentId: investmentId,

@@ -398,7 +398,7 @@ export class EmailService {
                 </div>
                 <div class="detail-row">
                   <span class="detail-label">Investment Amount:</span>
-                  <span class="detail-value"><strong>€${investment.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span>
+                  <span class="detail-value"><strong>$${investment.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span>
                 </div>
                 <div class="detail-row">
                   <span class="detail-label">Number of Bonds:</span>
@@ -449,7 +449,7 @@ export class EmailService {
       - Investment ID: ${investment.investmentId}
       ${investment.transactionId ? `- Transaction ID: ${investment.transactionId}\n` : ''}
       - Investment Opportunity: ${investment.investmentOpportunity}
-      - Investment Amount: €${investment.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      - Investment Amount: $${investment.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       - Number of Bonds: ${investment.bonds}
       - Payment Method: ${paymentMethodDisplay}
       - Transaction Date: ${formattedDate}
@@ -546,7 +546,7 @@ export class EmailService {
                 </div>
                 <div class="detail-row">
                   <span class="detail-label">Investment Amount:</span>
-                  <span class="detail-value"><strong>€${investment.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span>
+                  <span class="detail-value"><strong>$${investment.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span>
                 </div>
                 <div class="detail-row">
                   <span class="detail-label">Number of Bonds:</span>
@@ -605,7 +605,7 @@ export class EmailService {
       - Investment ID: ${investment.investmentId}
       ${investment.transactionId ? `- Transaction ID: ${investment.transactionId}\n` : ''}
       - Investment Opportunity: ${investment.investmentOpportunity}
-      - Investment Amount: €${investment.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      - Investment Amount: $${investment.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       - Number of Bonds: ${investment.bonds}
       - Payment Method: ${paymentMethodDisplay}
       - Transaction Date: ${formattedDate}

@@ -45,7 +45,7 @@ export class Transaction {
   @Column()
   amount: number;
 
-  @Column({ default: 'EUR' })
+  @Column({ default: 'USD' })
   currency: string;
 
   @Column()
@@ -79,7 +79,7 @@ export class Transaction {
       this.status = TransactionStatus.PENDING;
     }
     if (!this.currency) {
-      this.currency = 'EUR';
+      this.currency = 'USD';
     }
     if (!this.createdAt) {
       this.createdAt = new Date();

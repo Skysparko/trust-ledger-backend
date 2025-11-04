@@ -76,7 +76,7 @@ export class BlockchainController {
       dto.symbol || `${opportunity.company.substring(0, 3).toUpperCase()}BOND`,
       maturityTimestamp,
       dto.couponRate || opportunity.rate * 100, // Convert to basis points
-      dto.bondPrice || 100, // Default €100 per bond
+      dto.bondPrice || 100, // Default $100 per bond
     );
 
     // Update opportunity with contract address
