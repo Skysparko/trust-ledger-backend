@@ -1,4 +1,4 @@
-import { IsString, IsEnum, IsDateString, IsOptional, IsBoolean } from 'class-validator';
+import { IsString, IsEnum, IsDateString, IsOptional, IsBoolean, IsArray } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { PostCategory } from '../../entities/post.entity';
 
@@ -78,5 +78,10 @@ export class CreatePostDto {
     return value;
   })
   isPublished?: boolean;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  tags?: string[];
 }
 
