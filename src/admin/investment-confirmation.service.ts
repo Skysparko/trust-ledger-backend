@@ -89,7 +89,7 @@ export class InvestmentConfirmationService {
     );
 
     // Find and update transaction status
-    let transaction = null;
+    let transaction: Transaction | null = null;
     if (investment.id) {
       // Try to find transaction by investmentId first
       transaction = await this.transactionRepository.findOne({
@@ -256,7 +256,7 @@ export class InvestmentConfirmationService {
     );
 
     // Find and update transaction status
-    let transaction = null;
+    let transaction: Transaction | null = null;
     if (investment.id) {
       // Try to find transaction by investmentId first
       transaction = await this.transactionRepository.findOne({

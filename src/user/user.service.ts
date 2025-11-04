@@ -334,11 +334,29 @@ export class UserService {
   }
 
   async getInvestments(userId: string) {
-    return await this.investmentRepository.find({
+    const investments = await this.investmentRepository.find({
       where: { userId },
-      relations: ['investmentOpportunity'],
       order: { createdAt: 'DESC' },
     });
+
+    // Get unique investment opportunity IDs
+    const opportunityIds = [...new Set(investments.map(inv => inv.investmentOpportunityId).filter(Boolean))];
+    
+    // Fetch all investment opportunities - fetch individually for MongoDB compatibility
+    const opportunities = await Promise.all(
+      opportunityIds.map(id =>
+        this.investmentOpportunityRepository.findOne({ where: { id } })
+      )
+    ).then(results => results.filter(Boolean) as InvestmentOpportunity[]);
+    
+    // Create a map for quick lookup
+    const opportunityMap = new Map(opportunities.map(opp => [opp.id, opp]));
+
+    // Map investments to include investmentOpportunityTitle
+    return investments.map((investment) => ({
+      ...investment,
+      investmentOpportunityTitle: opportunityMap.get(investment.investmentOpportunityId)?.title || null,
+    }));
   }
 
   async getTransactions(userId: string, type?: string, status?: string) {
