@@ -1,17 +1,30 @@
-import { IsString, IsEnum, IsDateString } from 'class-validator';
-import { ProjectType, ProjectStatus } from '../../entities/project.entity';
+import { IsString, IsOptional, ValidateIf } from 'class-validator';
 
 export class CreateProjectDto {
   @IsString()
-  title: string;
+  @ValidateIf((o) => !o.name)
+  title?: string;
 
-  @IsEnum(ProjectType)
-  type: ProjectType;
+  @IsString()
+  @IsOptional()
+  @ValidateIf((o) => !o.title)
+  name?: string;
+
+  @IsString()
+  type: string;
 
   @IsString()
   location: string;
 
-  @IsEnum(ProjectStatus)
-  status: ProjectStatus;
+  @IsString()
+  status: string;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @IsString()
+  @IsOptional()
+  sector?: string;
 }
 

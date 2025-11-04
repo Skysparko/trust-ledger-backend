@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Issuance, IssuanceStatus, IssuanceType } from '../entities/issuance.entity';
-import { Project, ProjectStatus, ProjectType } from '../entities/project.entity';
+import { Project } from '../entities/project.entity';
 import { Post, PostCategory } from '../entities/post.entity';
 import { Webinar } from '../entities/webinar.entity';
 import { EmailService } from '../common/email.service';
@@ -73,8 +73,8 @@ export class PublicService {
   }
 
   async getProjects(filters: {
-    type?: ProjectType;
-    status?: ProjectStatus;
+    type?: string;
+    status?: string;
     location?: string;
   }) {
     // MongoDB doesn't support Query Builder, so we use find() and filter in memory
@@ -103,8 +103,17 @@ export class PublicService {
 
     // Sort by createdAt descending
     filteredProjects.sort((a, b) => {
-      const aDate = a.createdAt?.getTime() || 0;
-      const bDate = b.createdAt?.getTime() || 0;
+      const getDateValue = (date: Date | string | null | undefined): number => {
+        if (!date) return 0;
+        if (date instanceof Date) return date.getTime();
+        if (typeof date === 'string') {
+          const parsed = new Date(date);
+          return isNaN(parsed.getTime()) ? 0 : parsed.getTime();
+        }
+        return 0;
+      };
+      const aDate = getDateValue(a.createdAt);
+      const bDate = getDateValue(b.createdAt);
       return bDate - aDate;
     });
 

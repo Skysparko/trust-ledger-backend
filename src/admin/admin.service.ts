@@ -456,8 +456,17 @@ export class AdminService {
 
     // Sort by createdAt descending
     filteredProjects.sort((a, b) => {
-      const aDate = a.createdAt?.getTime() || 0;
-      const bDate = b.createdAt?.getTime() || 0;
+      const getDateValue = (date: Date | string | null | undefined): number => {
+        if (!date) return 0;
+        if (date instanceof Date) return date.getTime();
+        if (typeof date === 'string') {
+          const parsed = new Date(date);
+          return isNaN(parsed.getTime()) ? 0 : parsed.getTime();
+        }
+        return 0;
+      };
+      const aDate = getDateValue(a.createdAt);
+      const bDate = getDateValue(b.createdAt);
       return bDate - aDate;
     });
 
@@ -478,13 +487,21 @@ export class AdminService {
     const projectId = randomUUID();
     const now = new Date();
     
+    // Map 'name' to 'title' if title is not provided
+    const title = createProjectDto.title || createProjectDto.name;
+    if (!title) {
+      throw new BadRequestException('Either title or name must be provided');
+    }
+    
     // Use MongoDB manager's native insertOne to avoid relation metadata issues
     const mongoManager = this.dataSource.mongoManager;
+    const { name, ...restDto } = createProjectDto; // Remove 'name' from DTO
     const projectData = {
       _id: projectId,
       id: projectId,
-      ...createProjectDto,
-      status: createProjectDto.status || ProjectStatus.IN_DEVELOPMENT,
+      ...restDto,
+      title, // Use mapped title
+      status: createProjectDto.status || 'Active',
       createdAt: now,
       updatedAt: now,
     };

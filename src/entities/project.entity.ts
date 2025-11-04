@@ -13,9 +13,9 @@ export enum ProjectType {
 }
 
 export enum ProjectStatus {
-  IN_DEVELOPMENT = 'In development',
-  LIVE = 'Live',
+  ACTIVE = 'Active',
   COMPLETED = 'Completed',
+  CANCELLED = 'Cancelled',
 }
 
 @Entity('projects')
@@ -27,13 +27,19 @@ export class Project {
   title: string;
 
   @Column()
-  type: ProjectType;
+  type: string;
 
   @Column()
   location: string;
 
   @Column()
-  status: ProjectStatus;
+  status: string;
+
+  @Column('text', { nullable: true })
+  description: string;
+
+  @Column({ nullable: true })
+  sector: string;
 
   @Column({ nullable: true })
   createdAt: Date;
@@ -47,7 +53,7 @@ export class Project {
       this.id = randomUUID();
     }
     if (!this.status) {
-      this.status = ProjectStatus.IN_DEVELOPMENT;
+      this.status = 'Active';
     }
     if (!this.createdAt) {
       this.createdAt = new Date();

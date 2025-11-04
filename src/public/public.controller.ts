@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Param, Query, Body } from '@nestjs/common';
 import { PublicService } from './public.service';
 import { IssuanceStatus, IssuanceType } from '../entities/issuance.entity';
-import { ProjectStatus, ProjectType } from '../entities/project.entity';
+// ProjectStatus and ProjectType are now strings in the entity
 import { PostCategory } from '../entities/post.entity';
 
 @Controller('api')
@@ -24,8 +24,8 @@ export class PublicController {
 
   @Get('projects')
   async getProjects(
-    @Query('type') type?: ProjectType,
-    @Query('status') status?: ProjectStatus,
+    @Query('type') type?: string,
+    @Query('status') status?: string,
     @Query('location') location?: string,
   ) {
     return this.publicService.getProjects({ type, status, location });
