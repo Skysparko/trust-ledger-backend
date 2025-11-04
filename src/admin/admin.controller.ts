@@ -312,5 +312,10 @@ export class AdminController {
   async cancelInvestment(@Param('id') id: string) {
     return this.investmentConfirmationService.cancelInvestment(id);
   }
+
+  @Get('blockchain/investments')
+  async getBlockchainInvestments() {
+    return this.adminService.getBlockchainInvestments();
+  }
 }
 

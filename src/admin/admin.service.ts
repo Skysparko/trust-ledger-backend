@@ -22,6 +22,7 @@ import { CreateProjectDto } from '../dto/admin/create-project.dto';
 import { CreateWebinarDto } from '../dto/admin/create-webinar.dto';
 import { CreatePostDto } from '../dto/admin/create-post.dto';
 import { FileUploadService } from '../common/file-upload.service';
+import { BlockchainService } from '../blockchain/blockchain.service';
 
 @Injectable()
 export class AdminService {
@@ -47,6 +48,7 @@ export class AdminService {
     @InjectRepository(Post)
     private postRepository: Repository<Post>,
     private fileUploadService: FileUploadService,
+    private blockchainService: BlockchainService,
     @InjectDataSource()
     private dataSource: DataSource,
   ) {}
@@ -888,6 +890,89 @@ export class AdminService {
     // Use delete method for MongoDB compatibility (avoids relation loading issues)
     await this.postRepository.delete({ id });
     return { success: true };
+  }
+
+  /**
+   * Get all blockchain investments with contract info
+   * Queries actual on-chain data from Sonic network
+   */
+  async getBlockchainInvestments() {
+    // Get all opportunities with deployed contracts
+    const opportunities = await this.investmentOpportunityRepository.find({
+      where: { contractAddress: { $ne: null } } as any,
+    });
+    
+    // Filter out null contract addresses (TypeORM doesn't handle this well)
+    const opportunitiesWithContracts = opportunities.filter(
+      (opp) => opp.contractAddress && opp.contractAddress.trim() !== ''
+    );
+
+    // Get all investments
+    const investments = await this.investmentRepository.find({
+      relations: ['user', 'investmentOpportunity'],
+    });
+
+    // Map investments to blockchain data and query actual on-chain balances
+    const blockchainInvestmentsPromises = investments
+      .filter((inv) => {
+        const opp = opportunitiesWithContracts.find((o) => o.id === inv.investmentOpportunityId);
+        return opp && opp.contractAddress && inv.walletAddress;
+      })
+      .map(async (inv) => {
+        const opp = opportunitiesWithContracts.find((o) => o.id === inv.investmentOpportunityId);
+        
+        // Query actual blockchain for real bond balance
+        let onChainBonds = 0;
+        let onChainTokenBalance = '0';
+        let blockchainError: string | null = null;
+        
+        try {
+          onChainBonds = await this.blockchainService.getBondBalance(
+            opp!.contractAddress!,
+            inv.walletAddress!
+          );
+          onChainTokenBalance = await this.blockchainService.getTokenBalance(
+            opp!.contractAddress!,
+            inv.walletAddress!
+          );
+        } catch (error: any) {
+          blockchainError = error.message || 'Failed to query blockchain';
+          console.error(`Failed to query blockchain for investment ${inv.id}:`, error);
+        }
+
+        return {
+          investmentId: inv.id,
+          userId: inv.userId,
+          userEmail: inv.user?.email || 'Unknown',
+          userName: inv.user?.name || 'Unknown',
+          walletAddress: inv.walletAddress,
+          opportunityId: inv.investmentOpportunityId,
+          opportunityTitle: opp?.title || 'Unknown',
+          company: opp?.company || 'Unknown',
+          contractAddress: opp?.contractAddress,
+          contractDeploymentTx: opp?.contractDeploymentTx,
+          mintTxHash: inv.mintTxHash,
+          // Database values (for comparison)
+          dbBonds: inv.bonds || 0,
+          dbAmount: inv.amount,
+          // Actual on-chain values from Sonic network
+          onChainBonds,
+          onChainTokenBalance,
+          blockchainError,
+          status: inv.status,
+          createdAt: inv.createdAt,
+        };
+      });
+
+    const blockchainInvestments = await Promise.all(blockchainInvestmentsPromises);
+
+    return {
+      success: true,
+      data: blockchainInvestments,
+      totalContracts: opportunitiesWithContracts.length,
+      totalInvestments: blockchainInvestments.length,
+      onChainTotalBonds: blockchainInvestments.reduce((sum, inv) => sum + inv.onChainBonds, 0),
+    };
   }
 }
 

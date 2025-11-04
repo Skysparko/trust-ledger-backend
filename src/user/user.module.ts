@@ -10,6 +10,7 @@ import { Asset } from '../entities/asset.entity';
 import { Notification } from '../entities/notification.entity';
 import { InvestmentOpportunity } from '../entities/investment-opportunity.entity';
 import { FileUploadService } from '../common/file-upload.service';
+import { BlockchainModule } from '../blockchain/blockchain.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { FileUploadService } from '../common/file-upload.service';
       Notification,
       InvestmentOpportunity,
     ]),
+    BlockchainModule,
   ],
   controllers: [UserController],
   providers: [UserService, FileUploadService],

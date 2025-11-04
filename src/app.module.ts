@@ -9,6 +9,7 @@ import { UserModule } from './user/user.module';
 import { AdminModule } from './admin/admin.module';
 import { PublicModule } from './public/public.module';
 import { InvestmentOpportunityModule } from './investment-opportunity/investment-opportunity.module';
+import { BlockchainModule } from './blockchain/blockchain.module';
 import { getDatabaseConfig } from './config/database.config';
 import { getTypeOrmConfig } from './config/typeorm.config';
 
@@ -33,6 +34,7 @@ import { getTypeOrmConfig } from './config/typeorm.config';
     AdminModule,
     PublicModule,
     InvestmentOpportunityModule,
+    BlockchainModule,
   ],
   controllers: [AppController],
   providers: [AppService],

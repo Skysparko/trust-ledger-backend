@@ -60,6 +60,13 @@ export class Investment {
   @Column({ nullable: true })
   paymentMethod: PaymentMethod;
 
+  // Blockchain
+  @Column({ nullable: true })
+  mintTxHash: string; // Transaction hash of bond minting
+
+  @Column({ nullable: true })
+  walletAddress: string; // Wallet address where bonds were minted
+
   @Column({ nullable: true })
   createdAt: Date;
 

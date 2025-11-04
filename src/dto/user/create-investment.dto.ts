@@ -1,4 +1,4 @@
-import { IsEnum, IsNumber, IsString, Min } from 'class-validator';
+import { IsEnum, IsNumber, IsString, Min, IsOptional } from 'class-validator';
 import { PaymentMethod } from '../../entities/investment.entity';
 
 export class CreateInvestmentDto {
@@ -11,5 +11,9 @@ export class CreateInvestmentDto {
 
   @IsEnum(PaymentMethod)
   paymentMethod: PaymentMethod;
+
+  @IsString()
+  @IsOptional()
+  walletAddress?: string; // Wallet address to mint bonds to (optional, uses profile wallet if not provided)
 }
 
