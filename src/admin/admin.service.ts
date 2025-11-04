@@ -295,7 +295,7 @@ export class AdminService {
         user: item.user ? { name: item.user.name, email: item.user.email } : null,
         issuance: null, // Legacy field for backward compatibility (no longer used)
         investmentOpportunity: item.investmentOpportunity ? { title: item.investmentOpportunity.title } : null,
-        amount: item.transaction.amount,
+        amount: Math.abs(item.transaction.amount),
         status: item.transaction.status,
         paymentMethod: item.transaction.paymentMethod,
         date: item.transaction.date,
@@ -304,6 +304,200 @@ export class AdminService {
       total,
       page,
       limit,
+    };
+  }
+
+  async getTransactionById(id: string) {
+    // Try to find transaction by ID first
+    let transaction = await this.transactionRepository.findOne({
+      where: { id },
+    });
+
+    let investment: Investment | null = null;
+    let investmentId: string | null = null;
+
+    if (transaction) {
+      // If transaction found, get the associated investment
+      investmentId = transaction.investmentId;
+      if (investmentId) {
+        investment = await this.investmentRepository.findOne({
+          where: { id: investmentId },
+        });
+      }
+    } else {
+      // If not found as transaction, try as investment ID
+      investment = await this.investmentRepository.findOne({
+        where: { id },
+      });
+
+      if (investment) {
+        // Find transaction associated with this investment
+        transaction = await this.transactionRepository.findOne({
+          where: { investmentId: id },
+        });
+      }
+    }
+
+    // If neither transaction nor investment found, throw 404
+    if (!transaction && !investment) {
+      throw new NotFoundException(`No transaction found with ID: ${id}`);
+    }
+
+    // Get user data with profile
+    const userId = transaction?.userId || investment?.userId;
+    const user = userId ? await this.userRepository.findOne({ where: { id: userId } }) : null;
+    const userProfile = userId
+      ? await this.profileRepository.findOne({ where: { userId } })
+      : null;
+
+    // Get investment opportunity data
+    const investmentOpportunityId = investment?.investmentOpportunityId;
+    const investmentOpportunity = investmentOpportunityId
+      ? await this.investmentOpportunityRepository.findOne({ where: { id: investmentOpportunityId } })
+      : null;
+
+    // Determine the date - prioritize transaction date, then investment date, then created dates
+    let dateValue: Date | null = null;
+    if (transaction?.date) {
+      dateValue = transaction.date;
+    } else if (investment?.date) {
+      dateValue = investment.date;
+    } else if (transaction?.createdAt) {
+      dateValue = transaction.createdAt;
+    } else if (investment?.createdAt) {
+      dateValue = investment.createdAt;
+    }
+
+    // Build user object with details
+    const userObject = user
+      ? {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          type: user.type,
+          isActive: user.isActive,
+          createdAt: user.createdAt?.toISOString() || null,
+          lastLogin: user.lastLogin?.toISOString() || null,
+          profile: userProfile
+            ? {
+                id: userProfile.id,
+                phone: userProfile.phone || null,
+                bank: userProfile.bank || null,
+                kycStatus: userProfile.kycStatus,
+                kycDocumentName: userProfile.kycDocumentName || null,
+                kycDocumentUrl: userProfile.kycDocumentUrl || null,
+                agreementSigned: userProfile.agreementSigned,
+                agreementSignedAt: userProfile.agreementSignedAt?.toISOString() || null,
+                emailVerified: userProfile.emailVerified,
+                emailVerifiedAt: userProfile.emailVerifiedAt?.toISOString() || null,
+                twoFactorEnabled: userProfile.twoFactorEnabled,
+                walletAddress: userProfile.walletAddress || null,
+                walletNetwork: userProfile.walletNetwork || null,
+                createdAt: userProfile.createdAt?.toISOString() || null,
+                updatedAt: userProfile.updatedAt?.toISOString() || null,
+              }
+            : null,
+        }
+      : null;
+
+    // Build investment object with details
+    const investmentObject = investment
+      ? {
+          id: investment.id,
+          userId: investment.userId,
+          investmentOpportunityId: investment.investmentOpportunityId,
+          date: investment.date?.toISOString() || null,
+          amount: investment.amount,
+          status: investment.status,
+          documentUrl: investment.documentUrl || null,
+          bonds: investment.bonds || null,
+          paymentMethod: investment.paymentMethod || null,
+          createdAt: investment.createdAt?.toISOString() || null,
+          updatedAt: investment.updatedAt?.toISOString() || null,
+        }
+      : null;
+
+    // Build investment opportunity object with details
+    const investmentOpportunityObject = investmentOpportunity
+      ? {
+          id: investmentOpportunity.id,
+          title: investmentOpportunity.title,
+          slug: investmentOpportunity.slug || null,
+          company: investmentOpportunity.company,
+          sector: investmentOpportunity.sector,
+          type: investmentOpportunity.type,
+          location: investmentOpportunity.location,
+          description: investmentOpportunity.description,
+          shortDescription: investmentOpportunity.shortDescription || null,
+          rate: Number(investmentOpportunity.rate) || 0,
+          minInvestment: Number(investmentOpportunity.minInvestment) || 0,
+          maxInvestment: investmentOpportunity.maxInvestment ? Number(investmentOpportunity.maxInvestment) : null,
+          termMonths: investmentOpportunity.termMonths,
+          totalFundingTarget: Number(investmentOpportunity.totalFundingTarget) || 0,
+          currentFunding: Number(investmentOpportunity.currentFunding) || 0,
+          paymentFrequency: investmentOpportunity.paymentFrequency,
+          bondStructure: investmentOpportunity.bondStructure || null,
+          creditRating: investmentOpportunity.creditRating || null,
+          earlyRedemptionAllowed: investmentOpportunity.earlyRedemptionAllowed,
+          earlyRedemptionPenalty: investmentOpportunity.earlyRedemptionPenalty
+            ? Number(investmentOpportunity.earlyRedemptionPenalty)
+            : null,
+          status: investmentOpportunity.status,
+          startDate: investmentOpportunity.startDate?.toISOString() || null,
+          endDate: investmentOpportunity.endDate?.toISOString() || null,
+          riskLevel: investmentOpportunity.riskLevel,
+          companyDescription: investmentOpportunity.companyDescription || null,
+          companyWebsite: investmentOpportunity.companyWebsite || null,
+          companyAddress: investmentOpportunity.companyAddress || null,
+          projectType: investmentOpportunity.projectType,
+          useOfFunds: investmentOpportunity.useOfFunds,
+          keyHighlights: investmentOpportunity.keyHighlights || [],
+          riskFactors: investmentOpportunity.riskFactors || [],
+          legalStructure: investmentOpportunity.legalStructure || null,
+          jurisdiction: investmentOpportunity.jurisdiction || null,
+          thumbnailImage: investmentOpportunity.thumbnailImage || null,
+          logo: investmentOpportunity.logo || null,
+          images: investmentOpportunity.images || [],
+          videoUrl: investmentOpportunity.videoUrl || null,
+          isFeatured: investmentOpportunity.isFeatured,
+          investorsCount: investmentOpportunity.investorsCount || 0,
+          averageInvestment: investmentOpportunity.averageInvestment
+            ? Number(investmentOpportunity.averageInvestment)
+            : null,
+          medianInvestment: investmentOpportunity.medianInvestment ? Number(investmentOpportunity.medianInvestment) : null,
+          largestInvestment: investmentOpportunity.largestInvestment
+            ? Number(investmentOpportunity.largestInvestment)
+            : null,
+          faq: investmentOpportunity.faq || [],
+          milestones: investmentOpportunity.milestones || [],
+          tags: investmentOpportunity.tags || [],
+          relatedOpportunities: investmentOpportunity.relatedOpportunities || [],
+          seoTitle: investmentOpportunity.seoTitle || null,
+          seoDescription: investmentOpportunity.seoDescription || null,
+          createdAt: investmentOpportunity.createdAt?.toISOString() || null,
+          updatedAt: investmentOpportunity.updatedAt?.toISOString() || null,
+        }
+      : null;
+
+    // Return nested structure with separate objects
+    const transactionAmount = transaction?.amount || investment?.amount || 0;
+    return {
+      id: transaction?.id || investment?.id || id,
+      userId: userId || null,
+      investmentOpportunityId: investmentOpportunityId || null,
+      amount: Math.abs(transactionAmount),
+      status: transaction?.status || investment?.status || null,
+      paymentMethod: transaction?.paymentMethod || investment?.paymentMethod || null,
+      date: dateValue ? dateValue.toISOString() : new Date().toISOString(),
+      bonds: investment?.bonds || null,
+      // Include flat fields for backward compatibility
+      userName: user?.name || null,
+      userEmail: user?.email || null,
+      investmentOpportunityTitle: investmentOpportunity?.title || null,
+      // Nested objects
+      user: userObject,
+      investment: investmentObject,
+      investmentOpportunity: investmentOpportunityObject,
     };
   }
 

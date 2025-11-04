@@ -329,11 +329,28 @@ export class EmailService {
     email: string,
     name: string,
     investment: {
+      investmentId: string;
+      transactionId?: string;
       amount: number;
       bonds: number;
       investmentOpportunity: string;
+      paymentMethod?: string;
+      date: string;
+      status: string;
     },
   ): Promise<void> {
+    const formattedDate = new Date(investment.date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const paymentMethodDisplay = investment.paymentMethod
+      ? investment.paymentMethod.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+      : 'Not specified';
+
     const html = `
       <!DOCTYPE html>
       <html>
@@ -344,50 +361,271 @@ export class EmailService {
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
             .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; }
             .content { padding: 20px; background-color: #f9f9f9; }
-            .investment-details { background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0; }
+            .investment-details { background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
             .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
-            .detail-label { font-weight: bold; }
+            .detail-row:last-child { border-bottom: none; }
+            .detail-label { font-weight: bold; color: #555; }
+            .detail-value { color: #333; }
+            .status-badge { display: inline-block; padding: 5px 15px; background-color: #4CAF50; color: white; border-radius: 20px; font-size: 12px; font-weight: bold; }
             .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
+            .info-box { background-color: #e8f5e9; padding: 15px; border-left: 4px solid #4CAF50; margin: 20px 0; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <h1>Investment Confirmed!</h1>
+              <h1>✓ Investment Confirmed!</h1>
             </div>
             <div class="content">
               <p>Dear ${name},</p>
-              <p>We're pleased to confirm that your investment has been successfully processed.</p>
+              <p>We're pleased to confirm that your investment has been successfully processed and confirmed.</p>
+              
               <div class="investment-details">
-                <h3>Investment Details</h3>
+                <h3 style="margin-top: 0; color: #4CAF50;">Investment Details</h3>
+                <div class="detail-row">
+                  <span class="detail-label">Investment ID:</span>
+                  <span class="detail-value">${investment.investmentId}</span>
+                </div>
+                ${investment.transactionId ? `
+                <div class="detail-row">
+                  <span class="detail-label">Transaction ID:</span>
+                  <span class="detail-value">${investment.transactionId}</span>
+                </div>
+                ` : ''}
                 <div class="detail-row">
                   <span class="detail-label">Investment Opportunity:</span>
-                  <span>${investment.investmentOpportunity}</span>
-                </div>
-                <div class="detail-row">
-                  <span class="detail-label">Number of Bonds:</span>
-                  <span>${investment.bonds}</span>
+                  <span class="detail-value">${investment.investmentOpportunity}</span>
                 </div>
                 <div class="detail-row">
                   <span class="detail-label">Investment Amount:</span>
-                  <span>€${investment.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span class="detail-value"><strong>€${investment.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Number of Bonds:</span>
+                  <span class="detail-value">${investment.bonds}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Payment Method:</span>
+                  <span class="detail-value">${paymentMethodDisplay}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Transaction Date:</span>
+                  <span class="detail-value">${formattedDate}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Status:</span>
+                  <span class="status-badge">${investment.status.toUpperCase()}</span>
                 </div>
               </div>
-              <p>You can view your investment details and download documents from your dashboard.</p>
+
+              <div class="info-box">
+                <p><strong>What's Next?</strong></p>
+                <p>Your investment has been confirmed and your bonds have been added to your portfolio. You can view your investment details, download documents, and track your returns from your dashboard.</p>
+              </div>
+
+              <p>You can view your investment details and download documents from your dashboard at <a href="${this.frontendUrl}/dashboard">${this.frontendUrl}/dashboard</a>.</p>
+              
               <p>Thank you for investing with TrustLedger!</p>
+              
+              <p>Best regards,<br>The TrustLedger Team</p>
             </div>
             <div class="footer">
               <p>&copy; ${new Date().getFullYear()} TrustLedger. All rights reserved.</p>
+              <p>This is an automated email. Please do not reply to this message.</p>
             </div>
           </div>
         </body>
       </html>
     `;
 
+    const text = `
+      Investment Confirmed - TrustLedger
+      
+      Dear ${name},
+      
+      We're pleased to confirm that your investment has been successfully processed and confirmed.
+      
+      Investment Details:
+      - Investment ID: ${investment.investmentId}
+      ${investment.transactionId ? `- Transaction ID: ${investment.transactionId}\n` : ''}
+      - Investment Opportunity: ${investment.investmentOpportunity}
+      - Investment Amount: €${investment.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      - Number of Bonds: ${investment.bonds}
+      - Payment Method: ${paymentMethodDisplay}
+      - Transaction Date: ${formattedDate}
+      - Status: ${investment.status.toUpperCase()}
+      
+      Your investment has been confirmed and your bonds have been added to your portfolio. You can view your investment details and download documents from your dashboard.
+      
+      Thank you for investing with TrustLedger!
+      
+      Best regards,
+      The TrustLedger Team
+    `;
+
     await this.sendEmail({
       to: email,
       subject: 'Investment Confirmed - TrustLedger',
       html,
+      text,
+    });
+  }
+
+  async sendInvestmentCancellation(
+    email: string,
+    name: string,
+    investment: {
+      investmentId: string;
+      transactionId?: string;
+      amount: number;
+      bonds: number;
+      investmentOpportunity: string;
+      paymentMethod?: string;
+      date: string;
+      status: string;
+      reason?: string;
+    },
+  ): Promise<void> {
+    const formattedDate = new Date(investment.date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const paymentMethodDisplay = investment.paymentMethod
+      ? investment.paymentMethod.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+      : 'Not specified';
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #f44336; color: white; padding: 20px; text-align: center; }
+            .content { padding: 20px; background-color: #f9f9f9; }
+            .investment-details { background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+            .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+            .detail-row:last-child { border-bottom: none; }
+            .detail-label { font-weight: bold; color: #555; }
+            .detail-value { color: #333; }
+            .status-badge { display: inline-block; padding: 5px 15px; background-color: #f44336; color: white; border-radius: 20px; font-size: 12px; font-weight: bold; }
+            .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
+            .warning-box { background-color: #ffebee; padding: 15px; border-left: 4px solid #f44336; margin: 20px 0; }
+            .info-box { background-color: #e3f2fd; padding: 15px; border-left: 4px solid #2196F3; margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Investment Cancelled</h1>
+            </div>
+            <div class="content">
+              <p>Dear ${name},</p>
+              <p>We regret to inform you that your investment has been cancelled.</p>
+              
+              <div class="investment-details">
+                <h3 style="margin-top: 0; color: #f44336;">Investment Details</h3>
+                <div class="detail-row">
+                  <span class="detail-label">Investment ID:</span>
+                  <span class="detail-value">${investment.investmentId}</span>
+                </div>
+                ${investment.transactionId ? `
+                <div class="detail-row">
+                  <span class="detail-label">Transaction ID:</span>
+                  <span class="detail-value">${investment.transactionId}</span>
+                </div>
+                ` : ''}
+                <div class="detail-row">
+                  <span class="detail-label">Investment Opportunity:</span>
+                  <span class="detail-value">${investment.investmentOpportunity}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Investment Amount:</span>
+                  <span class="detail-value"><strong>€${investment.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Number of Bonds:</span>
+                  <span class="detail-value">${investment.bonds}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Payment Method:</span>
+                  <span class="detail-value">${paymentMethodDisplay}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Transaction Date:</span>
+                  <span class="detail-value">${formattedDate}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Status:</span>
+                  <span class="status-badge">${investment.status.toUpperCase()}</span>
+                </div>
+              </div>
+
+              ${investment.reason ? `
+              <div class="warning-box">
+                <p><strong>Reason for Cancellation:</strong></p>
+                <p>${investment.reason}</p>
+              </div>
+              ` : ''}
+
+              <div class="info-box">
+                <p><strong>What Happens Next?</strong></p>
+                <p>Your transaction has been marked as cancelled. If any payment was processed, it will be refunded to your original payment method within 5-7 business days.</p>
+                <p>If you have any questions or concerns, please contact our support team.</p>
+              </div>
+
+              <p>You can view your transaction history and investment status from your dashboard at <a href="${this.frontendUrl}/dashboard">${this.frontendUrl}/dashboard</a>.</p>
+              
+              <p>If you have any questions, please don't hesitate to contact our support team.</p>
+              
+              <p>Best regards,<br>The TrustLedger Team</p>
+            </div>
+            <div class="footer">
+              <p>&copy; ${new Date().getFullYear()} TrustLedger. All rights reserved.</p>
+              <p>This is an automated email. Please do not reply to this message.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const text = `
+      Investment Cancelled - TrustLedger
+      
+      Dear ${name},
+      
+      We regret to inform you that your investment has been cancelled.
+      
+      Investment Details:
+      - Investment ID: ${investment.investmentId}
+      ${investment.transactionId ? `- Transaction ID: ${investment.transactionId}\n` : ''}
+      - Investment Opportunity: ${investment.investmentOpportunity}
+      - Investment Amount: €${investment.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      - Number of Bonds: ${investment.bonds}
+      - Payment Method: ${paymentMethodDisplay}
+      - Transaction Date: ${formattedDate}
+      - Status: ${investment.status.toUpperCase()}
+      
+      ${investment.reason ? `Reason for Cancellation: ${investment.reason}\n\n` : ''}
+      
+      Your transaction has been marked as cancelled. If any payment was processed, it will be refunded to your original payment method within 5-7 business days.
+      
+      If you have any questions or concerns, please contact our support team.
+      
+      Best regards,
+      The TrustLedger Team
+    `;
+
+    await this.sendEmail({
+      to: email,
+      subject: 'Investment Cancelled - TrustLedger',
+      html,
+      text,
     });
   }
 }

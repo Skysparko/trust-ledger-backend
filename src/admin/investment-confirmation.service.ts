@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
@@ -15,6 +16,8 @@ import { EmailService } from '../common/email.service';
 
 @Injectable()
 export class InvestmentConfirmationService {
+  private readonly logger = new Logger(InvestmentConfirmationService.name);
+
   constructor(
     @InjectRepository(Investment)
     private investmentRepository: Repository<Investment>,
@@ -31,13 +34,27 @@ export class InvestmentConfirmationService {
     private dataSource: DataSource,
   ) {}
 
-  async confirmInvestment(investmentId: string) {
-    const investment = await this.investmentRepository.findOne({
-      where: { id: investmentId },
+  async confirmInvestment(id: string) {
+    // Try to find investment by ID first
+    let investment = await this.investmentRepository.findOne({
+      where: { id },
     });
 
+    // If not found as investment, try as transaction ID
     if (!investment) {
-      throw new NotFoundException('Investment not found');
+      const transaction = await this.transactionRepository.findOne({
+        where: { id },
+      });
+
+      if (transaction && transaction.investmentId) {
+        investment = await this.investmentRepository.findOne({
+          where: { id: transaction.investmentId },
+        });
+      }
+
+      if (!investment) {
+        throw new NotFoundException(`No investment found with ID: ${id}`);
+      }
     }
 
     if (investment.status !== InvestmentStatus.PENDING) {
@@ -62,7 +79,7 @@ export class InvestmentConfirmationService {
 
     // Update investment status using MongoDB manager
     await mongoManager.getMongoRepository(Investment).updateOne(
-      { id: investmentId },
+      { id: investment.id },
       {
         $set: {
           status: InvestmentStatus.CONFIRMED,
@@ -71,15 +88,28 @@ export class InvestmentConfirmationService {
       },
     );
 
-    // Update transaction status
-    const transaction = await this.transactionRepository.findOne({
-      where: {
-        userId: investment.userId,
-        type: TransactionType.INVESTMENT,
-        amount: -investment.amount,
-      },
-      order: { createdAt: 'DESC' },
-    });
+    // Find and update transaction status
+    let transaction = null;
+    if (investment.id) {
+      // Try to find transaction by investmentId first
+      transaction = await this.transactionRepository.findOne({
+        where: {
+          investmentId: investment.id,
+        },
+      });
+    }
+    
+    // If not found, try to find by user and amount
+    if (!transaction) {
+      transaction = await this.transactionRepository.findOne({
+        where: {
+          userId: investment.userId,
+          type: TransactionType.INVESTMENT,
+          amount: -investment.amount,
+        },
+        order: { createdAt: 'DESC' },
+      });
+    }
 
     if (transaction) {
       await mongoManager.getMongoRepository(Transaction).updateOne(
@@ -143,36 +173,68 @@ export class InvestmentConfirmationService {
     
     await mongoManager.getMongoRepository(Asset).insertOne(assetData);
 
-    // Send confirmation email to user
-    const user = await this.userRepository.findOne({
-      where: { id: investment.userId },
+    // Fetch the updated investment first (to ensure all operations succeeded)
+    const updatedInvestment = await this.investmentRepository.findOne({
+      where: { id: investment.id },
     });
 
-    if (user) {
-      await this.emailService.sendInvestmentConfirmation(
-        user.email,
-        user.name,
-        {
-          amount: Number(investment.amount),
-          bonds: investment.bonds || Number(investment.amount) / 100,
-          investmentOpportunity: investmentOpportunity.title,
-        },
-      );
+    // Only send email after all operations succeed
+    if (updatedInvestment) {
+      try {
+        const user = await this.userRepository.findOne({
+          where: { id: investment.userId },
+        });
+
+        if (user) {
+          await this.emailService.sendInvestmentConfirmation(
+            user.email,
+            user.name,
+            {
+              investmentId: investment.id,
+              transactionId: transaction?.id,
+              amount: Number(investment.amount),
+              bonds: investment.bonds || Number(investment.amount) / 100,
+              investmentOpportunity: investmentOpportunity.title,
+              paymentMethod: investment.paymentMethod || transaction?.paymentMethod,
+              date: investment.date?.toISOString() || investment.createdAt?.toISOString() || new Date().toISOString(),
+              status: InvestmentStatus.CONFIRMED,
+            },
+          );
+          this.logger.log(`Confirmation email sent successfully to ${user.email} for investment ${investment.id}`);
+        }
+      } catch (emailError) {
+        // Log email error but don't fail the API response
+        this.logger.error(
+          `Failed to send confirmation email for investment ${investment.id}:`,
+          emailError,
+        );
+      }
     }
 
-    // Fetch and return the updated investment
-    return await this.investmentRepository.findOne({
-      where: { id: investmentId },
-    });
+    return updatedInvestment;
   }
 
-  async cancelInvestment(investmentId: string) {
-    const investment = await this.investmentRepository.findOne({
-      where: { id: investmentId },
+  async cancelInvestment(id: string) {
+    // Try to find investment by ID first
+    let investment = await this.investmentRepository.findOne({
+      where: { id },
     });
 
+    // If not found as investment, try as transaction ID
     if (!investment) {
-      throw new NotFoundException('Investment not found');
+      const transaction = await this.transactionRepository.findOne({
+        where: { id },
+      });
+
+      if (transaction && transaction.investmentId) {
+        investment = await this.investmentRepository.findOne({
+          where: { id: transaction.investmentId },
+        });
+      }
+
+      if (!investment) {
+        throw new NotFoundException(`No investment found with ID: ${id}`);
+      }
     }
 
     if (investment.status !== InvestmentStatus.PENDING) {
@@ -184,7 +246,7 @@ export class InvestmentConfirmationService {
 
     // Update investment status using MongoDB manager
     await mongoManager.getMongoRepository(Investment).updateOne(
-      { id: investmentId },
+      { id: investment.id },
       {
         $set: {
           status: InvestmentStatus.CANCELLED,
@@ -193,15 +255,28 @@ export class InvestmentConfirmationService {
       },
     );
 
-    // Update transaction status
-    const transaction = await this.transactionRepository.findOne({
-      where: {
-        userId: investment.userId,
-        type: TransactionType.INVESTMENT,
-        amount: -investment.amount,
-      },
-      order: { createdAt: 'DESC' },
-    });
+    // Find and update transaction status
+    let transaction = null;
+    if (investment.id) {
+      // Try to find transaction by investmentId first
+      transaction = await this.transactionRepository.findOne({
+        where: {
+          investmentId: investment.id,
+        },
+      });
+    }
+    
+    // If not found, try to find by user and amount
+    if (!transaction) {
+      transaction = await this.transactionRepository.findOne({
+        where: {
+          userId: investment.userId,
+          type: TransactionType.INVESTMENT,
+          amount: -investment.amount,
+        },
+        order: { createdAt: 'DESC' },
+      });
+    }
 
     if (transaction) {
       await mongoManager.getMongoRepository(Transaction).updateOne(
@@ -215,10 +290,52 @@ export class InvestmentConfirmationService {
       );
     }
 
-    // Fetch and return the updated investment
-    return await this.investmentRepository.findOne({
-      where: { id: investmentId },
+    // Fetch the updated investment first (to ensure all operations succeeded)
+    const updatedInvestment = await this.investmentRepository.findOne({
+      where: { id: investment.id },
     });
+
+    // Only send email after all operations succeed
+    if (updatedInvestment) {
+      try {
+        // Get investment opportunity for email
+        const investmentOpportunity = investment.investmentOpportunityId
+          ? await this.investmentOpportunityRepository.findOne({
+              where: { id: investment.investmentOpportunityId },
+            })
+          : null;
+
+        const user = await this.userRepository.findOne({
+          where: { id: investment.userId },
+        });
+
+        if (user) {
+          await this.emailService.sendInvestmentCancellation(
+            user.email,
+            user.name,
+            {
+              investmentId: investment.id,
+              transactionId: transaction?.id,
+              amount: Number(investment.amount),
+              bonds: investment.bonds || Number(investment.amount) / 100,
+              investmentOpportunity: investmentOpportunity?.title || 'Investment Opportunity',
+              paymentMethod: investment.paymentMethod || transaction?.paymentMethod,
+              date: investment.date?.toISOString() || investment.createdAt?.toISOString() || new Date().toISOString(),
+              status: InvestmentStatus.CANCELLED,
+            },
+          );
+          this.logger.log(`Cancellation email sent successfully to ${user.email} for investment ${investment.id}`);
+        }
+      } catch (emailError) {
+        // Log email error but don't fail the API response
+        this.logger.error(
+          `Failed to send cancellation email for investment ${investment.id}:`,
+          emailError,
+        );
+      }
+    }
+
+    return updatedInvestment;
   }
 }
 

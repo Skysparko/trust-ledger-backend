@@ -294,10 +294,16 @@ export class UserService {
       where.status = status;
     }
 
-    return await this.transactionRepository.find({
+    const transactions = await this.transactionRepository.find({
       where,
       order: { date: 'DESC' },
     });
+
+    // Return transactions with absolute amounts
+    return transactions.map((transaction) => ({
+      ...transaction,
+      amount: Math.abs(transaction.amount),
+    }));
   }
 
   async getAssets(userId: string) {

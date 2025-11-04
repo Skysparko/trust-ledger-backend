@@ -138,6 +138,11 @@ export class AdminController {
     return { message: 'Export not implemented yet' };
   }
 
+  @Get('transactions/:id')
+  async getTransactionById(@Param('id') id: string) {
+    return this.adminService.getTransactionById(id);
+  }
+
   @Get('issuances')
   async getIssuances(
     @Query('search') search?: string,
