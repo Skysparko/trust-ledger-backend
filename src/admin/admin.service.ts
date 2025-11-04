@@ -825,12 +825,15 @@ export class AdminService {
     const postId = randomUUID();
     const now = new Date();
     
+    // Extract isPublished if present (not stored in entity)
+    const { isPublished, ...postFields } = createPostDto;
+    
     // Use MongoDB manager's native insertOne to avoid relation metadata issues
     const mongoManager = this.dataSource.mongoManager;
     const postData = {
       _id: postId,
       id: postId,
-      ...createPostDto,
+      ...postFields,
       date: new Date(createPostDto.date),
       createdAt: now,
       updatedAt: now,
