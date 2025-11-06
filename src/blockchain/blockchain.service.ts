@@ -141,6 +141,26 @@ export class BlockchainService {
   }
 
   /**
+   * Get the wallet address used for transactions
+   */
+  getWalletAddress(): string {
+    return this.wallet.address;
+  }
+
+  /**
+   * Get the balance of the wallet in native currency (e.g., SONIC, ETH)
+   */
+  async getWalletBalance(): Promise<string> {
+    try {
+      const balance = await this.provider.getBalance(this.wallet.address);
+      return ethers.formatEther(balance);
+    } catch (error) {
+      this.logger.error(`Failed to get wallet balance: ${error.message}`, error.stack);
+      return '0';
+    }
+  }
+
+  /**
    * Mint bonds to a user's wallet
    */
   async mintBonds(
@@ -150,8 +170,41 @@ export class BlockchainService {
   ): Promise<{ transactionHash: string }> {
     try {
       this.logger.log(`Minting ${amount} bonds to ${toAddress}`);
+      this.logger.log(`Contract address: ${contractAddress}`);
+
+      // Check wallet balance before attempting transaction
+      const balance = await this.getWalletBalance();
+      const balanceWei = await this.provider.getBalance(this.wallet.address);
+      this.logger.log(`Wallet balance: ${balance} ${this.config.network === 'mainnet' ? 'SONIC' : 'testnet SONIC'}`);
+
+      if (balanceWei === 0n) {
+        throw new BadRequestException(
+          `Insufficient funds: Wallet ${this.wallet.address} has no native tokens. ` +
+          `Please fund this wallet with ${this.config.network === 'mainnet' ? 'SONIC' : 'testnet SONIC'} tokens to pay for gas fees.`
+        );
+      }
 
       const contract = new ethers.Contract(contractAddress, BOND_TOKEN_ABI, this.wallet);
+
+      // Estimate gas before sending transaction
+      try {
+        const gasEstimate = await contract.mint.estimateGas(toAddress, amount);
+        const gasPrice = await this.provider.getFeeData();
+        const estimatedCost = gasEstimate * (gasPrice.gasPrice || gasPrice.maxFeePerGas || 0n);
+        
+        this.logger.log(`Estimated gas: ${gasEstimate.toString()}, Estimated cost: ${ethers.formatEther(estimatedCost)} ${this.config.network === 'mainnet' ? 'SONIC' : 'testnet SONIC'}`);
+        
+        if (balanceWei < estimatedCost) {
+          throw new BadRequestException(
+            `Insufficient funds: Wallet ${this.wallet.address} has ${balance} ${this.config.network === 'mainnet' ? 'SONIC' : 'testnet SONIC'}, ` +
+            `but needs approximately ${ethers.formatEther(estimatedCost)} ${this.config.network === 'mainnet' ? 'SONIC' : 'testnet SONIC'} for gas fees. ` +
+            `Please fund this wallet with more native tokens.`
+          );
+        }
+      } catch (gasError) {
+        // If gas estimation fails, proceed anyway - it might be due to contract state
+        this.logger.warn(`Gas estimation failed: ${gasError.message}. Proceeding with transaction.`);
+      }
 
       const tx = await contract.mint(toAddress, amount);
       const receipt = await tx.wait();
@@ -162,8 +215,32 @@ export class BlockchainService {
         transactionHash: receipt.hash,
       };
     } catch (error) {
+      // Improve error messages for insufficient funds
+      if (error.message?.includes('insufficient funds') || error.code === 'INSUFFICIENT_FUNDS') {
+        const balance = await this.getWalletBalance();
+        this.logger.error(`Failed to mint bonds: Insufficient funds in wallet ${this.wallet.address}. Current balance: ${balance} ${this.config.network === 'mainnet' ? 'SONIC' : 'testnet SONIC'}`);
+        throw new BadRequestException(
+          `Insufficient funds: The wallet ${this.wallet.address} does not have enough ${this.config.network === 'mainnet' ? 'SONIC' : 'testnet SONIC'} tokens to pay for gas fees. ` +
+          `Current balance: ${balance} ${this.config.network === 'mainnet' ? 'SONIC' : 'testnet SONIC'}. ` +
+          `Please fund this wallet with native tokens to continue.`
+        );
+      }
+      
       this.logger.error(`Failed to mint bonds: ${error.message}`, error.stack);
       throw new BadRequestException(`Failed to mint bonds: ${error.message}`);
+    }
+  }
+
+  /**
+   * Check if a contract exists at the given address
+   */
+  async contractExists(contractAddress: string): Promise<boolean> {
+    try {
+      const code = await this.provider.getCode(contractAddress);
+      return code !== '0x' && code !== null && code.length > 2;
+    } catch (error) {
+      this.logger.warn(`Failed to check contract existence at ${contractAddress}: ${error.message}`);
+      return false;
     }
   }
 
@@ -175,11 +252,40 @@ export class BlockchainService {
     address: string,
   ): Promise<number> {
     try {
+      // Validate contract address
+      if (!contractAddress || !ethers.isAddress(contractAddress)) {
+        this.logger.warn(`Invalid contract address: ${contractAddress}`);
+        return 0;
+      }
+
+      // Check if contract exists
+      const exists = await this.contractExists(contractAddress);
+      if (!exists) {
+        this.logger.warn(`Contract does not exist at address ${contractAddress}`);
+        return 0;
+      }
+
+      // Validate wallet address
+      if (!address || !ethers.isAddress(address)) {
+        this.logger.warn(`Invalid wallet address: ${address}`);
+        return 0;
+      }
+
       const contract = new ethers.Contract(contractAddress, BOND_TOKEN_ABI, this.provider);
       const balance = await contract.getBondBalance(address);
       return Number(balance);
-    } catch (error) {
-      this.logger.error(`Failed to get bond balance: ${error.message}`, error.stack);
+    } catch (error: any) {
+      // Check for specific error types
+      if (error.message?.includes('could not decode result data') || error.code === 'BAD_DATA') {
+        this.logger.warn(
+          `Contract at ${contractAddress} may not have getBondBalance function or contract is not a BondToken contract`
+        );
+      } else {
+        this.logger.error(
+          `Failed to get bond balance for ${address} from contract ${contractAddress}: ${error.message}`,
+          error.stack
+        );
+      }
       return 0;
     }
   }
@@ -192,11 +298,40 @@ export class BlockchainService {
     address: string,
   ): Promise<string> {
     try {
+      // Validate contract address
+      if (!contractAddress || !ethers.isAddress(contractAddress)) {
+        this.logger.warn(`Invalid contract address: ${contractAddress}`);
+        return '0';
+      }
+
+      // Check if contract exists
+      const exists = await this.contractExists(contractAddress);
+      if (!exists) {
+        this.logger.warn(`Contract does not exist at address ${contractAddress}`);
+        return '0';
+      }
+
+      // Validate wallet address
+      if (!address || !ethers.isAddress(address)) {
+        this.logger.warn(`Invalid wallet address: ${address}`);
+        return '0';
+      }
+
       const contract = new ethers.Contract(contractAddress, BOND_TOKEN_ABI, this.provider);
       const balance = await contract.balanceOf(address);
       return balance.toString();
-    } catch (error) {
-      this.logger.error(`Failed to get token balance: ${error.message}`, error.stack);
+    } catch (error: any) {
+      // Check for specific error types
+      if (error.message?.includes('could not decode result data') || error.code === 'BAD_DATA') {
+        this.logger.warn(
+          `Contract at ${contractAddress} may not have balanceOf function or contract is not an ERC20 contract`
+        );
+      } else {
+        this.logger.error(
+          `Failed to get token balance for ${address} from contract ${contractAddress}: ${error.message}`,
+          error.stack
+        );
+      }
       return '0';
     }
   }

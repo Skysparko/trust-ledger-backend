@@ -12,7 +12,9 @@ import { Transaction, TransactionStatus, TransactionType } from '../entities/tra
 import { InvestmentOpportunity, InvestmentOpportunityStatus } from '../entities/investment-opportunity.entity';
 import { Asset, AssetType } from '../entities/asset.entity';
 import { User } from '../entities/user.entity';
+import { UserProfile } from '../entities/user-profile.entity';
 import { EmailService } from '../common/email.service';
+import { BlockchainService } from '../blockchain/blockchain.service';
 
 @Injectable()
 export class InvestmentConfirmationService {
@@ -29,7 +31,10 @@ export class InvestmentConfirmationService {
     private assetRepository: Repository<Asset>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(UserProfile)
+    private userProfileRepository: Repository<UserProfile>,
     private emailService: EmailService,
+    private blockchainService: BlockchainService,
     @InjectDataSource()
     private dataSource: DataSource,
   ) {}
@@ -73,6 +78,10 @@ export class InvestmentConfirmationService {
     if (investmentOpportunity.status !== InvestmentOpportunityStatus.ACTIVE) {
       throw new BadRequestException('Investment opportunity is not active');
     }
+
+    // Log opportunity details for debugging
+    this.logger.log(`Investment opportunity ${investmentOpportunity.id}: ${investmentOpportunity.title}`);
+    this.logger.log(`Contract address: ${investmentOpportunity.contractAddress || 'NOT DEPLOYED'}`);
 
     const mongoManager = this.dataSource.mongoManager;
     const now = new Date();
@@ -173,6 +182,105 @@ export class InvestmentConfirmationService {
     
     await mongoManager.getMongoRepository(Asset).insertOne(assetData);
 
+    // ========== MINT BONDS ON BLOCKCHAIN ==========
+    // Following Energyblocks flow: Bonds are minted ONLY when admin confirms investment
+    // - User creates investment → Status: PENDING, no minting (wallet address saved)
+    // - Admin confirms investment → Status: CONFIRMED, THEN mint bonds on blockchain
+    let mintTxHash: string | null = null;
+    let walletAddress: string | null = null;
+    
+    this.logger.log(`[BLOCKCHAIN MINT] Starting blockchain minting process for investment ${investment.id}`);
+    
+    try {
+      // Get wallet address from investment (saved during creation) or user profile
+      const userProfile = await this.userProfileRepository.findOne({
+        where: { userId: investment.userId },
+      });
+
+      // Priority: investment.walletAddress (from creation) > userProfile.walletAddress
+      walletAddress = investment.walletAddress || userProfile?.walletAddress || null;
+      
+      this.logger.log(`[BLOCKCHAIN MINT] User ${investment.userId} wallet address: ${walletAddress || 'NOT FOUND'}`);
+      this.logger.log(`[BLOCKCHAIN MINT] Contract address: ${investmentOpportunity.contractAddress || 'NOT DEPLOYED'}`);
+      this.logger.log(`[BLOCKCHAIN MINT] Investment amount: ${investment.amount}, Bonds: ${investment.bonds || 'not set'}`);
+
+      // Check if contract is deployed for this opportunity
+      if (investmentOpportunity.contractAddress && walletAddress) {
+        this.logger.log(`[BLOCKCHAIN MINT] ✅ All conditions met - proceeding with minting`);
+        
+        const bondsToMint = investment.bonds || Math.floor(investment.amount / 100); // Default: 1 bond per €100
+        
+        if (bondsToMint > 0) {
+          this.logger.log(
+            `[BLOCKCHAIN MINT] Minting ${bondsToMint} bonds on blockchain for investment ${investment.id} to wallet ${walletAddress}`
+          );
+
+          // Mint bonds on the blockchain
+          const mintResult = await this.blockchainService.mintBonds(
+            investmentOpportunity.contractAddress,
+            walletAddress,
+            bondsToMint,
+          );
+
+          mintTxHash = mintResult.transactionHash;
+          
+          this.logger.log(
+            `[BLOCKCHAIN MINT] ✅ Successfully minted ${bondsToMint} bonds. Transaction hash: ${mintTxHash}`
+          );
+
+          // Update investment with mint transaction hash and wallet address
+          await mongoManager.getMongoRepository(Investment).updateOne(
+            { id: investment.id },
+            {
+              $set: {
+                mintTxHash: mintTxHash,
+                walletAddress: walletAddress,
+                updatedAt: now,
+              },
+            },
+          );
+
+          this.logger.log(
+            `[BLOCKCHAIN MINT] Investment ${investment.id} updated with mint transaction hash: ${mintTxHash}`
+          );
+        } else {
+          this.logger.warn(
+            `[BLOCKCHAIN MINT] ❌ No bonds to mint for investment ${investment.id}. Bonds: ${bondsToMint}, Amount: ${investment.amount}`
+          );
+        }
+      } else {
+        if (!investmentOpportunity.contractAddress) {
+          this.logger.warn(
+            `[BLOCKCHAIN MINT] ❌ Cannot mint bonds for investment ${investment.id}: Contract not deployed for opportunity ${investmentOpportunity.id}`
+          );
+          this.logger.warn(
+            `[BLOCKCHAIN MINT] Action required: Admin must deploy the bond contract first using POST /api/blockchain/deploy-bond-token`
+          );
+        }
+        if (!walletAddress) {
+          this.logger.warn(
+            `[BLOCKCHAIN MINT] ❌ Cannot mint bonds for investment ${investment.id}: User ${investment.userId} has no wallet address`
+          );
+          this.logger.warn(
+            `[BLOCKCHAIN MINT] Action required: User must connect their wallet in their profile settings`
+          );
+        }
+      }
+    } catch (blockchainError: any) {
+      // Log blockchain error but don't fail the investment confirmation
+      // The investment is already confirmed, so we'll just log the error
+      this.logger.error(
+        `[BLOCKCHAIN MINT] ❌ FAILED to mint bonds on blockchain for investment ${investment.id}`,
+      );
+      this.logger.error(`[BLOCKCHAIN MINT] Error message: ${blockchainError.message || blockchainError}`);
+      this.logger.error(`[BLOCKCHAIN MINT] Stack trace:`, blockchainError.stack);
+      
+      // Continue with investment confirmation even if blockchain minting fails
+      // Admin can manually mint later if needed
+    }
+    
+    this.logger.log(`[BLOCKCHAIN MINT] Final result - mintTxHash: ${mintTxHash || 'NONE'}, walletAddress: ${walletAddress || 'NONE'}`);
+
     // Fetch the updated investment first (to ensure all operations succeeded)
     const updatedInvestment = await this.investmentRepository.findOne({
       where: { id: investment.id },
@@ -198,6 +306,13 @@ export class InvestmentConfirmationService {
               paymentMethod: investment.paymentMethod || transaction?.paymentMethod,
               date: investment.date?.toISOString() || investment.createdAt?.toISOString() || new Date().toISOString(),
               status: InvestmentStatus.CONFIRMED,
+              // Include blockchain information if minting was successful
+              mintTxHash: mintTxHash || null,
+              contractAddress: investmentOpportunity.contractAddress || null,
+              walletAddress: walletAddress || null,
+              explorerUrl: mintTxHash 
+                ? this.blockchainService.getExplorerUrl(mintTxHash)
+                : null,
             },
           );
           this.logger.log(`Confirmation email sent successfully to ${user.email} for investment ${investment.id}`);

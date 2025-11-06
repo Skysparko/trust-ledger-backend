@@ -146,19 +146,79 @@ GET /api/blockchain/user-holdings/:address
 - **Self-Custody**: Users hold their bond tokens directly in their wallets.
 - **On-Chain Visibility**: All transactions are visible on Sonic blockchain explorer.
 
+## Getting Testnet Tokens (Important!)
+
+**⚠️ Even on testnet, you need tokens to pay for gas fees!**
+
+Testnets require gas fees just like mainnet, but you pay with **free testnet tokens** instead of real money. This is by design to simulate real-world conditions.
+
+### Why Testnets Require Gas Fees
+
+- **Testnets mirror mainnet behavior** - they require gas fees to process transactions
+- **Testnet tokens are FREE** - obtained from faucets, no real money needed
+- **Gas fees prevent spam** - ensures the testnet remains functional
+- **Realistic testing** - helps catch issues before mainnet deployment
+
+### How to Get Sonic Testnet Tokens
+
+1. **Get your wallet address:**
+   - Use the new API endpoint: `GET /api/blockchain/wallet-info` (Super Admin only)
+   - Or extract it from your `BLOCKCHAIN_PRIVATE_KEY` using any Ethereum wallet tool
+
+2. **Request tokens from a faucet:**
+   - Visit the Sonic testnet explorer: https://testnet.sonicscan.org
+   - Look for a "Faucet" link or button
+   - Enter your wallet address and request testnet tokens
+   - Alternatively, check Sonic's official documentation or Discord for faucet links
+
+3. **Verify you received tokens:**
+   - Check your balance using: `GET /api/blockchain/wallet-info`
+   - Or view on the explorer: https://testnet.sonicscan.org/address/YOUR_WALLET_ADDRESS
+
+4. **Minimum recommended balance:**
+   - Keep at least 0.1-0.5 testnet SONIC tokens for multiple transactions
+   - Gas costs are typically very low on testnets (fractions of tokens)
+
+### Quick Check Script
+
+You can also create a simple script to check your wallet balance:
+
+```javascript
+const { ethers } = require('ethers');
+
+const WALLET_ADDRESS = '0x...'; // Your wallet address from BLOCKCHAIN_PRIVATE_KEY
+const RPC_URL = 'https://rpc.testnet.soniclabs.com';
+
+async function checkBalance() {
+  const provider = new ethers.JsonRpcProvider(RPC_URL);
+  const balance = await provider.getBalance(WALLET_ADDRESS);
+  console.log(`Balance: ${ethers.formatEther(balance)} testnet SONIC`);
+  console.log(`Wallet: ${WALLET_ADDRESS}`);
+  console.log(`Explorer: https://testnet.sonicscan.org/address/${WALLET_ADDRESS}`);
+}
+
+checkBalance();
+```
+
 ## Troubleshooting
 
 ### Contract Deployment Fails
 - Ensure `BOND_TOKEN_BYTECODE` is set correctly
-- Verify the private key has sufficient funds for gas
+- **Verify the private key has sufficient testnet tokens for gas** (use faucet if needed)
 - Check RPC endpoint is accessible
+
+### Bond Minting Fails - "Insufficient Funds" Error
+- **Most common cause**: Wallet has no testnet tokens
+- **Solution**: Get testnet tokens from a faucet (see above)
+- Check wallet balance using: `GET /api/blockchain/wallet-info`
+- The error message now shows your wallet address and current balance
 
 ### Wallet Connection Issues
 - Ensure WalletConnect Project ID is set
 - Verify Sonic network is added to wallet (chain ID: 64165 for testnet)
 - Check browser console for errors
 
-### Bond Minting Fails
+### Bond Minting Fails - Other Errors
 - Ensure investment opportunity has a deployed contract
 - Verify user wallet address is valid
 - Check backend logs for detailed error messages

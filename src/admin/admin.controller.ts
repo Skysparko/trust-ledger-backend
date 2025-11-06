@@ -322,5 +322,10 @@ export class AdminController {
   async getBlockchainInvestments() {
     return this.adminService.getBlockchainInvestments();
   }
+
+  @Get('blockchain/diagnostics/:investmentId')
+  async getBlockchainDiagnostics(@Param('investmentId') investmentId: string) {
+    return this.adminService.getBlockchainDiagnostics(investmentId);
+  }
 }
 

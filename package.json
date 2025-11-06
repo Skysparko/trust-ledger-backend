@@ -19,7 +19,8 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "setup:env": "node -e \"require('fs').writeFileSync('.env', require('fs').readFileSync('SETUP.md', 'utf8').match(/^```[\\s\\S]*?^```$/m)?.[0]?.replace(/^```.*\\n/, '').replace(/\\n```$/, '') || '')\" || bash scripts/create-env.sh || powershell -ExecutionPolicy Bypass -File scripts/create-env.ps1",
-    "create:admin": "ts-node -r tsconfig-paths/register scripts/create-admin.ts"
+    "create:admin": "ts-node -r tsconfig-paths/register scripts/create-admin.ts",
+    "check:wallet": "ts-node -r tsconfig-paths/register scripts/check-wallet-balance.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

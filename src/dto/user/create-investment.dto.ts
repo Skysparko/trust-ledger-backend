@@ -14,6 +14,6 @@ export class CreateInvestmentDto {
 
   @IsString()
   @IsOptional()
-  walletAddress?: string; // Wallet address to mint bonds to (optional, uses profile wallet if not provided)
+  walletAddress: string; // Wallet address to mint bonds to (required)
 }
 

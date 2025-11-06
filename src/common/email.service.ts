@@ -337,6 +337,10 @@ export class EmailService {
       paymentMethod?: string;
       date: string;
       status: string;
+      mintTxHash?: string | null;
+      contractAddress?: string | null;
+      walletAddress?: string | null;
+      explorerUrl?: string | null;
     },
   ): Promise<void> {
     const formattedDate = new Date(investment.date).toLocaleDateString('en-US', {
@@ -418,9 +422,40 @@ export class EmailService {
                 </div>
               </div>
 
+              ${investment.mintTxHash ? `
+              <div class="investment-details" style="background-color: #e3f2fd; border-left: 4px solid #2196F3;">
+                <h3 style="margin-top: 0; color: #2196F3;">🔗 Blockchain Transaction</h3>
+                <div class="detail-row">
+                  <span class="detail-label">Bonds Minted On-Chain:</span>
+                  <span class="detail-value"><strong>${investment.bonds} bonds</strong></span>
+                </div>
+                ${investment.walletAddress ? `
+                <div class="detail-row">
+                  <span class="detail-label">Wallet Address:</span>
+                  <span class="detail-value" style="font-family: monospace; font-size: 12px;">${investment.walletAddress.slice(0, 6)}...${investment.walletAddress.slice(-4)}</span>
+                </div>
+                ` : ''}
+                ${investment.contractAddress ? `
+                <div class="detail-row">
+                  <span class="detail-label">Contract Address:</span>
+                  <span class="detail-value" style="font-family: monospace; font-size: 12px;">${investment.contractAddress.slice(0, 6)}...${investment.contractAddress.slice(-4)}</span>
+                </div>
+                ` : ''}
+                <div class="detail-row">
+                  <span class="detail-label">Mint Transaction:</span>
+                  <span class="detail-value" style="font-family: monospace; font-size: 12px;">${investment.mintTxHash.slice(0, 10)}...${investment.mintTxHash.slice(-8)}</span>
+                </div>
+                ${investment.explorerUrl ? `
+                <div style="margin-top: 15px; text-align: center;">
+                  <a href="${investment.explorerUrl}" style="display: inline-block; padding: 10px 20px; background-color: #2196F3; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">View on Blockchain Explorer</a>
+                </div>
+                ` : ''}
+              </div>
+              ` : ''}
+
               <div class="info-box">
                 <p><strong>What's Next?</strong></p>
-                <p>Your investment has been confirmed and your bonds have been added to your portfolio. You can view your investment details, download documents, and track your returns from your dashboard.</p>
+                <p>Your investment has been confirmed and your bonds have been added to your portfolio. ${investment.mintTxHash ? 'Your bonds have been minted on the blockchain and are now in your wallet.' : ''} You can view your investment details, download documents, and track your returns from your dashboard.</p>
               </div>
 
               <p>You can view your investment details and download documents from your dashboard at <a href="${this.frontendUrl}/dashboard">${this.frontendUrl}/dashboard</a>.</p>

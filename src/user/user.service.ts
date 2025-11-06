@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
@@ -21,6 +22,8 @@ import { BlockchainService } from '../blockchain/blockchain.service';
 
 @Injectable()
 export class UserService {
+  private readonly logger = new Logger(UserService.name);
+
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
@@ -270,62 +273,41 @@ export class UserService {
     
     await mongoManager.getMongoRepository(Transaction).insertOne(transactionData);
 
-    // Mint bonds on blockchain if contract is deployed and wallet address is provided
-    let mintTxHash: string | null = null;
+    // Save wallet address if provided (will be used for minting when admin confirms)
+    // Following Energyblocks flow: bonds are minted ONLY when admin confirms, not on creation
     let walletAddress: string | null = null;
-
-    if (investmentOpportunity.contractAddress) {
-      // Get wallet address from DTO or user profile
+    if (createInvestmentDto.walletAddress) {
+      walletAddress = createInvestmentDto.walletAddress;
+      // Save wallet address to investment for later use during confirmation
+      await mongoManager.getMongoRepository(Investment).updateOne(
+        { id: investmentId },
+        {
+          $set: {
+            walletAddress: walletAddress,
+          },
+        },
+      );
+      this.logger.log(`Wallet address saved for investment ${investmentId}: ${walletAddress}`);
+    } else {
+      // Try to get wallet address from user profile
       const profile = await this.getOrCreateProfile(userId);
-      walletAddress = createInvestmentDto.walletAddress || profile.walletAddress || null;
-
-      if (walletAddress) {
-        try {
-          // Mint bonds on-chain (mock payment - no actual payment processing)
-          const mintResult = await this.blockchainService.mintBonds(
-            investmentOpportunity.contractAddress,
-            walletAddress,
-            createInvestmentDto.bonds,
-          );
-          mintTxHash = mintResult.transactionHash;
-
-          // Update investment with blockchain info
-          await mongoManager.getMongoRepository(Investment).updateOne(
-            { id: investmentId },
-            {
-              $set: {
-                mintTxHash,
-                walletAddress,
-                status: InvestmentStatus.CONFIRMED, // Auto-confirm for mock payments
-              },
+      if (profile?.walletAddress) {
+        walletAddress = profile.walletAddress;
+        await mongoManager.getMongoRepository(Investment).updateOne(
+          { id: investmentId },
+          {
+            $set: {
+              walletAddress: walletAddress,
             },
-          );
-
-          // Update transaction status
-          await mongoManager.getMongoRepository(Transaction).updateOne(
-            { id: transactionId },
-            {
-              $set: {
-                status: TransactionStatus.COMPLETED,
-              },
-            },
-          );
-
-          // Update opportunity funding
-          await mongoManager.getMongoRepository(InvestmentOpportunity).updateOne(
-            { id: investmentOpportunity.id },
-            {
-              $set: {
-                currentFunding: newFunding,
-              },
-            },
-          );
-        } catch (error) {
-          // Log error but don't fail the investment creation
-          console.error('Failed to mint bonds on blockchain:', error);
-        }
+          },
+        );
+        this.logger.log(`Wallet address from profile saved for investment ${investmentId}: ${walletAddress}`);
       }
     }
+
+    // Note: Bonds will be minted when admin confirms the investment
+    // Investment status remains PENDING until admin approval
+    // Following Energyblocks flow: create → pending → admin confirms → mint bonds
 
     // Fetch and return the created investment
     return await this.investmentRepository.findOne({

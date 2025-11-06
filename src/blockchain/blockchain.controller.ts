@@ -254,5 +254,22 @@ export class BlockchainController {
       data: holdings,
     };
   }
+
+  @Get('wallet-info')
+  @UseGuards(JwtAuthGuard, SuperAdminGuard)
+  async getWalletInfo() {
+    const address = this.blockchainService.getWalletAddress();
+    const balance = await this.blockchainService.getWalletBalance();
+
+    return {
+      success: true,
+      data: {
+        address,
+        balance,
+        network: process.env.BLOCKCHAIN_NETWORK || 'testnet',
+        explorerUrl: this.blockchainService.getContractExplorerUrl(address),
+      },
+    };
+  }
 }
 
