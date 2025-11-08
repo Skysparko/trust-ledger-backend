@@ -1102,21 +1102,27 @@ export class AdminService {
     );
 
     // Get all investments (show all, not just those with contracts/wallets)
-    const investments = await this.investmentRepository.find({
-      relations: ['user', 'investmentOpportunity'],
-    });
+    // Note: MongoDB doesn't support relations like SQL, so we fetch separately
+    const investments = await this.investmentRepository.find();
+
+    // Fetch all users at once to avoid N+1 queries
+    const allUsers = await this.userRepository.find();
+    const usersMap = new Map(allUsers.map(u => [u.id, u]));
 
     // Map investments to blockchain data and query actual on-chain balances
     // Show ALL investments so admin can see what's missing (contracts, wallet addresses, etc.)
     const blockchainInvestmentsPromises = investments.map(async (inv) => {
+        // Get user from map (MongoDB doesn't support relations)
+        const user = usersMap.get(inv.userId);
+        
         const opp = opportunitiesWithContracts.find((o) => o.id === inv.investmentOpportunityId);
         
-        // Also try to get opportunity from relations if not found in opportunitiesWithContracts
-        const investmentOpp = inv.investmentOpportunity || 
+        // Also try to get opportunity if not found in opportunitiesWithContracts
+        const investmentOpp = opp || 
           await this.investmentOpportunityRepository.findOne({ where: { id: inv.investmentOpportunityId } });
         
         // Use the opportunity data (prefer opp, fallback to investmentOpp)
-        const opportunity = opp || investmentOpp;
+        const opportunity = investmentOpp;
         
         // Query actual blockchain for real bond balance
         let onChainBonds = 0;
@@ -1131,35 +1137,41 @@ export class AdminService {
         } else if (!inv.walletAddress) {
           blockchainError = 'Wallet address not found for this investment';
         } else {
-          try {
-            // Check if contract exists first
-            const contractExists = await this.blockchainService.contractExists(opportunity.contractAddress);
-            if (!contractExists) {
-              blockchainError = `Contract does not exist at ${opportunity.contractAddress}. It may not be deployed yet or address is incorrect.`;
-            } else {
-              onChainBonds = await this.blockchainService.getBondBalance(
-                opportunity.contractAddress,
-                inv.walletAddress
-              );
-              onChainTokenBalance = await this.blockchainService.getTokenBalance(
-                opportunity.contractAddress,
-                inv.walletAddress
+          // Check if contract address is actually a wallet address (common mistake)
+          const walletAddress = this.blockchainService.getWalletAddress();
+          if (opportunity.contractAddress.toLowerCase() === walletAddress.toLowerCase()) {
+            blockchainError = `Invalid contract address: The stored address (${opportunity.contractAddress}) is the admin wallet address, not a contract address. Please redeploy the contract.`;
+          } else {
+            try {
+              // Check if contract exists first
+              const contractExists = await this.blockchainService.contractExists(opportunity.contractAddress);
+              if (!contractExists) {
+                blockchainError = `Contract does not exist at ${opportunity.contractAddress}. It may not be deployed yet or address is incorrect.`;
+              } else {
+                onChainBonds = await this.blockchainService.getBondBalance(
+                  opportunity.contractAddress,
+                  inv.walletAddress
+                );
+                onChainTokenBalance = await this.blockchainService.getTokenBalance(
+                  opportunity.contractAddress,
+                  inv.walletAddress
+                );
+              }
+            } catch (error: any) {
+              blockchainError = error.message || 'Failed to query blockchain';
+              console.error(
+                `Failed to query blockchain for investment ${inv.id} (contract: ${opportunity?.contractAddress}, wallet: ${inv.walletAddress}):`,
+                error
               );
             }
-          } catch (error: any) {
-            blockchainError = error.message || 'Failed to query blockchain';
-            console.error(
-              `Failed to query blockchain for investment ${inv.id} (contract: ${opportunity?.contractAddress}, wallet: ${inv.walletAddress}):`,
-              error
-            );
           }
         }
 
         return {
           investmentId: inv.id,
           userId: inv.userId,
-          userEmail: inv.user?.email || 'Unknown',
-          userName: inv.user?.name || 'Unknown',
+          userEmail: user?.email || 'Unknown',
+          userName: user?.name || 'Unknown',
           walletAddress: inv.walletAddress,
           opportunityId: inv.investmentOpportunityId,
           opportunityTitle: opportunity?.title || 'Unknown',
@@ -1189,13 +1201,15 @@ export class AdminService {
     });
 
     return {
-      success: true,
-      data: blockchainInvestments,
-      totalContracts: opportunitiesWithContracts.length,
-      totalInvestments: blockchainInvestments.length,
-      totalInvestmentsWithContracts: blockchainInvestments.filter(inv => inv.contractAddress).length,
-      totalInvestmentsWithWallets: blockchainInvestments.filter(inv => inv.walletAddress).length,
-      onChainTotalBonds: blockchainInvestments.reduce((sum, inv) => sum + inv.onChainBonds, 0),
+      data:{
+        success: true,
+        data: blockchainInvestments,
+        totalContracts: opportunitiesWithContracts.length,
+        totalInvestments: blockchainInvestments.length,
+        totalInvestmentsWithContracts: blockchainInvestments.filter(inv => inv.contractAddress).length,
+        totalInvestmentsWithWallets: blockchainInvestments.filter(inv => inv.walletAddress).length,
+        onChainTotalBonds: blockchainInvestments.reduce((sum, inv) => sum + inv.onChainBonds, 0),
+      }
     };
   }
 

@@ -6,7 +6,7 @@ import {
   UpdateDateColumn,
   BeforeInsert,
 } from 'typeorm';
-import { randomUUID } from 'crypto';
+import { ObjectId } from 'mongodb';
 
 export enum IssuanceType {
   WIND = 'Wind',
@@ -34,13 +34,13 @@ export enum PaymentFrequency {
 
 @Entity('issuances')
 export class Issuance {
-  @PrimaryColumn()
+  @PrimaryColumn({ type: 'string' })
   id: string;
 
   @BeforeInsert()
   generateId() {
     if (!this.id) {
-      this.id = randomUUID();
+      this.id = new ObjectId().toString();
     }
   }
 

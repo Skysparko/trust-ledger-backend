@@ -61,6 +61,26 @@
 			"key": "document_id",
 			"value": "",
 			"type": "string"
+		},
+		{
+			"key": "opportunity_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "contract_address",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "wallet_address",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "transaction_hash",
+			"value": "",
+			"type": "string"
 		}
 	],
 	"item": [
@@ -1120,6 +1140,306 @@
 									]
 								},
 								"description": "Mark all notifications as read"
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Blockchain Endpoints",
+			"item": [
+				{
+					"name": "Super Admin",
+					"item": [
+						{
+							"name": "Deploy Bond Token",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{admin_token}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"opportunityId\": \"opportunity-id\",\n  \"name\": \"Green Energy Bond 2024\",\n  \"symbol\": \"GEB2024\",\n  \"maturityDate\": 1735689600000,\n  \"couponRate\": 550,\n  \"bondPrice\": 100\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{base_url}}/api/blockchain/deploy-bond-token",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"blockchain",
+										"deploy-bond-token"
+									]
+								},
+								"description": "Deploy a bond token contract for an investment opportunity. Requires SuperAdmin privileges. Optional fields (name, symbol, maturityDate, couponRate, bondPrice) will use opportunity defaults if not provided."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Wallet Info",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{admin_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/blockchain/wallet-info",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"blockchain",
+										"wallet-info"
+									]
+								},
+								"description": "Get deployer wallet address and balance. Requires SuperAdmin privileges."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Contract From Transaction",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{admin_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/blockchain/contract-from-tx/:txHash",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"blockchain",
+										"contract-from-tx",
+										":txHash"
+									],
+									"variable": [
+										{
+											"key": "txHash",
+											"value": "0x...",
+											"description": "Transaction hash"
+										}
+									]
+								},
+								"description": "Get contract address from a deployment transaction hash. Requires SuperAdmin privileges."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "User",
+					"item": [
+						{
+							"name": "Mint Bonds",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"opportunityId\": \"opportunity-id\",\n  \"toAddress\": \"0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb\",\n  \"amount\": 100\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{base_url}}/api/blockchain/mint-bonds",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"blockchain",
+										"mint-bonds"
+									]
+								},
+								"description": "Mint bonds to a wallet address. Requires authenticated user."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Bond Balance",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/blockchain/bond-balance/:opportunityId/:address",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"blockchain",
+										"bond-balance",
+										":opportunityId",
+										":address"
+									],
+									"variable": [
+										{
+											"key": "opportunityId",
+											"value": "opportunity-id",
+											"description": "Investment opportunity ID"
+										},
+										{
+											"key": "address",
+											"value": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+											"description": "Wallet address"
+										}
+									]
+								},
+								"description": "Get bond balance for a wallet address for a specific opportunity. Requires authenticated user."
+							},
+							"response": []
+						},
+						{
+							"name": "Transfer Bonds",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"opportunityId\": \"opportunity-id\",\n  \"fromAddress\": \"0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb\",\n  \"toAddress\": \"0x8ba1f109551bD432803012645Hac136c22C9e\",\n  \"amount\": 50\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{base_url}}/api/blockchain/transfer-bonds",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"blockchain",
+										"transfer-bonds"
+									]
+								},
+								"description": "Transfer bonds from one address to another. Requires authenticated user."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Contract Info",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/blockchain/contract-info/:opportunityId",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"blockchain",
+										"contract-info",
+										":opportunityId"
+									],
+									"variable": [
+										{
+											"key": "opportunityId",
+											"value": "opportunity-id",
+											"description": "Investment opportunity ID"
+										}
+									]
+								},
+								"description": "Get contract information (name, symbol, total supply, etc.) for an opportunity. Requires authenticated user."
+							},
+							"response": []
+						},
+						{
+							"name": "Get User Holdings",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{jwt_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/blockchain/user-holdings/:address",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"blockchain",
+										"user-holdings",
+										":address"
+									],
+									"variable": [
+										{
+											"key": "address",
+											"value": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+											"description": "Wallet address"
+										}
+									]
+								},
+								"description": "Get all bond holdings for a wallet address across all opportunities. Requires authenticated user."
 							},
 							"response": []
 						}
@@ -2335,6 +2655,73 @@
 									]
 								},
 								"description": "Cancel a pending investment"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Blockchain",
+					"item": [
+						{
+							"name": "Get Blockchain Investments",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{admin_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/admin/blockchain/investments",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"admin",
+										"blockchain",
+										"investments"
+									]
+								},
+								"description": "Get all investments with blockchain data including contract addresses, balances, and errors"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Blockchain Diagnostics",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{admin_token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/admin/blockchain/diagnostics/:investmentId",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"admin",
+										"blockchain",
+										"diagnostics",
+										":investmentId"
+									],
+									"variable": [
+										{
+											"key": "investmentId",
+											"value": "investment-id",
+											"description": "Investment ID"
+										}
+									]
+								},
+								"description": "Get detailed blockchain diagnostics for a specific investment"
 							},
 							"response": []
 						}

@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import { randomUUID } from 'crypto';
+import { ObjectId } from 'mongodb';
 import { User } from '../entities/user.entity';
 import { UserProfile, KYCStatus, WalletNetwork } from '../entities/user-profile.entity';
 import { Investment, InvestmentStatus } from '../entities/investment.entity';
@@ -230,9 +230,9 @@ export class UserService {
       throw new BadRequestException('Investment exceeds funding target');
     }
 
-    // Generate IDs manually for MongoDB compatibility
-    const investmentId = randomUUID();
-    const transactionId = randomUUID();
+    // Generate IDs manually for MongoDB compatibility (using ObjectId)
+    const investmentId = new ObjectId().toString();
+    const transactionId = new ObjectId().toString();
     const now = new Date();
     
     // Use MongoDB manager's native insertOne to avoid relation metadata issues

@@ -7,7 +7,7 @@ import {
   BeforeInsert,
   BeforeUpdate,
 } from 'typeorm';
-import { randomUUID } from 'crypto';
+import { ObjectId } from 'mongodb';
 
 export enum InvestmentOpportunityStatus {
   ACTIVE = 'active',
@@ -31,13 +31,13 @@ export enum PaymentFrequency {
 
 @Entity('investment_opportunities')
 export class InvestmentOpportunity {
-  @PrimaryColumn()
+  @PrimaryColumn({ type: 'string' })
   id: string;
 
   @BeforeInsert()
   generateId() {
     if (!this.id) {
-      this.id = randomUUID();
+      this.id = new ObjectId().toString();
     }
   }
 

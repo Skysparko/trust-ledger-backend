@@ -4,7 +4,7 @@ import {
   Column,
   BeforeInsert,
 } from 'typeorm';
-import { randomUUID } from 'crypto';
+import { ObjectId } from 'mongodb';
 
 export enum DocumentType {
   PDF = 'pdf',
@@ -22,7 +22,7 @@ export enum DocumentCategory {
 
 @Entity('documents')
 export class Document {
-  @PrimaryColumn()
+  @PrimaryColumn({ type: 'string' })
   id: string;
 
   @Column()
@@ -52,7 +52,7 @@ export class Document {
   @BeforeInsert()
   beforeInsert() {
     if (!this.id) {
-      this.id = randomUUID();
+      this.id = new ObjectId().toString();
     }
     if (!this.createdAt) {
       this.createdAt = new Date();

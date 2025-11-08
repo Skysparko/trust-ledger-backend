@@ -127,8 +127,27 @@ export class BlockchainService {
       const contractAddress = await contract.getAddress();
       const deployTx = contract.deploymentTransaction();
 
+      // Validate contract address is different from wallet address
+      if (contractAddress.toLowerCase() === this.wallet.address.toLowerCase()) {
+        throw new BadRequestException(
+          `Invalid deployment: Contract address (${contractAddress}) is the same as wallet address (${this.wallet.address}). ` +
+          `This usually means the contract deployment failed or returned the wrong address.`
+        );
+      }
+
+      // Verify contract actually exists at this address
+      const code = await this.provider.getCode(contractAddress);
+      if (!code || code === '0x' || code.length <= 2) {
+        throw new BadRequestException(
+          `Contract deployment verification failed: No code found at address ${contractAddress}. ` +
+          `The contract may not have been deployed successfully.`
+        );
+      }
+
       this.logger.log(`BondToken deployed at ${contractAddress}`);
+      this.logger.log(`Wallet address: ${this.wallet.address}`);
       this.logger.log(`Transaction hash: ${deployTx?.hash}`);
+      this.logger.log(`Contract code length: ${code.length} bytes`);
 
       return {
         contractAddress,
@@ -169,8 +188,10 @@ export class BlockchainService {
     amount: number, // Number of bonds
   ): Promise<{ transactionHash: string }> {
     try {
-      this.logger.log(`Minting ${amount} bonds to ${toAddress}`);
-      this.logger.log(`Contract address: ${contractAddress}`);
+      this.logger.log(`[MINT] Minting ${amount} bonds`);
+      this.logger.log(`[MINT] Contract address (from opportunity): ${contractAddress}`);
+      this.logger.log(`[MINT] Recipient wallet (user): ${toAddress}`);
+      this.logger.log(`[MINT] Admin wallet (signer only): ${this.wallet.address}`);
 
       // Check wallet balance before attempting transaction
       const balance = await this.getWalletBalance();
@@ -485,6 +506,25 @@ export class BlockchainService {
         blockNumber: event.blockNumber,
       });
     });
+  }
+
+  /**
+   * Get contract address from deployment transaction
+   * Useful if you only have the transaction hash
+   */
+  async getContractAddressFromTx(transactionHash: string): Promise<string | null> {
+    try {
+      const receipt = await this.provider.getTransactionReceipt(transactionHash);
+      if (!receipt) {
+        return null;
+      }
+      
+      // Contract address is in the contractAddress field of the receipt
+      return receipt.contractAddress || null;
+    } catch (error) {
+      this.logger.error(`Failed to get contract address from transaction ${transactionHash}: ${error.message}`);
+      return null;
+    }
   }
 
   /**

@@ -5,7 +5,7 @@ import {
   BeforeInsert,
   BeforeUpdate,
 } from 'typeorm';
-import { randomUUID } from 'crypto';
+import { ObjectId } from 'mongodb';
 
 export enum ProjectType {
   WIND = 'Wind',
@@ -20,7 +20,7 @@ export enum ProjectStatus {
 
 @Entity('projects')
 export class Project {
-  @PrimaryColumn()
+  @PrimaryColumn({ type: 'string' })
   id: string;
 
   @Column()
@@ -50,7 +50,7 @@ export class Project {
   @BeforeInsert()
   beforeInsert() {
     if (!this.id) {
-      this.id = randomUUID();
+      this.id = new ObjectId().toString();
     }
     if (!this.status) {
       this.status = 'Active';

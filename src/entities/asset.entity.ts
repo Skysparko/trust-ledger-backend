@@ -6,7 +6,7 @@ import {
   JoinColumn,
   BeforeInsert,
 } from 'typeorm';
-import { randomUUID } from 'crypto';
+import { ObjectId } from 'mongodb';
 import { User } from './user.entity';
 import { InvestmentOpportunity } from './investment-opportunity.entity';
 
@@ -18,7 +18,7 @@ export enum AssetType {
 
 @Entity('assets')
 export class Asset {
-  @PrimaryColumn()
+  @PrimaryColumn({ type: 'string' })
   id: string;
 
   @ManyToOne(() => User, (user) => user.assets)
@@ -56,7 +56,7 @@ export class Asset {
   @BeforeInsert()
   beforeInsert() {
     if (!this.id) {
-      this.id = randomUUID();
+      this.id = new ObjectId().toString();
     }
     if (!this.createdAt) {
       this.createdAt = new Date();

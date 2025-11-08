@@ -5,7 +5,7 @@ import {
   BeforeInsert,
   BeforeUpdate,
 } from 'typeorm';
-import { randomUUID } from 'crypto';
+import { ObjectId } from 'mongodb';
 
 export enum PostCategory {
   NEWS = 'News',
@@ -14,7 +14,7 @@ export enum PostCategory {
 
 @Entity('posts')
 export class Post {
-  @PrimaryColumn()
+  @PrimaryColumn({ type: 'string' })
   id: string;
 
   @Column()
@@ -41,7 +41,7 @@ export class Post {
   @BeforeInsert()
   beforeInsert() {
     if (!this.id) {
-      this.id = randomUUID();
+      this.id = new ObjectId().toString();
     }
     if (!this.createdAt) {
       this.createdAt = new Date();

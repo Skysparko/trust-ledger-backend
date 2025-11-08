@@ -207,18 +207,25 @@ export class InvestmentConfirmationService {
       // Check if contract is deployed for this opportunity
       if (investmentOpportunity.contractAddress && walletAddress) {
         this.logger.log(`[BLOCKCHAIN MINT] ✅ All conditions met - proceeding with minting`);
+        this.logger.log(`[BLOCKCHAIN MINT] Using contract address from opportunity: ${investmentOpportunity.contractAddress}`);
+        this.logger.log(`[BLOCKCHAIN MINT] Minting to user wallet: ${walletAddress}`);
         
         const bondsToMint = investment.bonds || Math.floor(investment.amount / 100); // Default: 1 bond per €100
         
         if (bondsToMint > 0) {
           this.logger.log(
-            `[BLOCKCHAIN MINT] Minting ${bondsToMint} bonds on blockchain for investment ${investment.id} to wallet ${walletAddress}`
+            `[BLOCKCHAIN MINT] Minting ${bondsToMint} bonds on blockchain for investment ${investment.id}`
+          );
+          this.logger.log(
+            `[BLOCKCHAIN MINT] Contract: ${investmentOpportunity.contractAddress}, Recipient: ${walletAddress}`
           );
 
           // Mint bonds on the blockchain
+          // IMPORTANT: Using investmentOpportunity.contractAddress (NOT admin wallet)
+          // Bonds are minted to walletAddress (user's wallet, NOT admin wallet)
           const mintResult = await this.blockchainService.mintBonds(
-            investmentOpportunity.contractAddress,
-            walletAddress,
+            investmentOpportunity.contractAddress, // ✅ Contract address from opportunity
+            walletAddress, // ✅ User's wallet address (recipient)
             bondsToMint,
           );
 

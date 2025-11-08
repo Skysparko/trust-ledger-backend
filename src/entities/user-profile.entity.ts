@@ -8,7 +8,7 @@ import {
   JoinColumn,
   BeforeInsert,
 } from 'typeorm';
-import { randomUUID } from 'crypto';
+import { ObjectId } from 'mongodb';
 import { User } from './user.entity';
 
 export enum KYCStatus {
@@ -26,13 +26,13 @@ export enum WalletNetwork {
 
 @Entity('user_profiles')
 export class UserProfile {
-  @PrimaryColumn()
+  @PrimaryColumn({ type: 'string' })
   id: string;
 
   @BeforeInsert()
   generateId() {
     if (!this.id) {
-      this.id = randomUUID();
+      this.id = new ObjectId().toString();
     }
   }
 

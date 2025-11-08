@@ -5,7 +5,7 @@ import {
   CreateDateColumn,
   BeforeInsert,
 } from 'typeorm';
-import { randomUUID } from 'crypto';
+import { ObjectId } from 'mongodb';
 
 export enum AdminRole {
   ADMIN = 'admin',
@@ -14,13 +14,13 @@ export enum AdminRole {
 
 @Entity('admins')
 export class Admin {
-  @PrimaryColumn()
+  @PrimaryColumn({ type: 'string' })
   id: string;
 
   @BeforeInsert()
   generateId() {
     if (!this.id) {
-      this.id = randomUUID();
+      this.id = new ObjectId().toString();
     }
   }
 

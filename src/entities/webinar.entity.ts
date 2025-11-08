@@ -5,11 +5,11 @@ import {
   BeforeInsert,
   BeforeUpdate,
 } from 'typeorm';
-import { randomUUID } from 'crypto';
+import { ObjectId } from 'mongodb';
 
 @Entity('webinars')
 export class Webinar {
-  @PrimaryColumn()
+  @PrimaryColumn({ type: 'string' })
   id: string;
 
   @Column()
@@ -42,7 +42,7 @@ export class Webinar {
   @BeforeInsert()
   beforeInsert() {
     if (!this.id) {
-      this.id = randomUUID();
+      this.id = new ObjectId().toString();
     }
     if (!this.createdAt) {
       this.createdAt = new Date();

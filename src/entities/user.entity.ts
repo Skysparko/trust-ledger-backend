@@ -8,7 +8,7 @@ import {
   OneToMany,
   BeforeInsert,
 } from 'typeorm';
-import { randomUUID } from 'crypto';
+import { ObjectId } from 'mongodb';
 import { UserProfile } from './user-profile.entity';
 import { Investment } from './investment.entity';
 import { Transaction } from './transaction.entity';
@@ -22,13 +22,13 @@ export enum UserType {
 
 @Entity('users')
 export class User {
-  @PrimaryColumn()
+  @PrimaryColumn({ type: 'string' })
   id: string;
 
   @BeforeInsert()
   generateId() {
     if (!this.id) {
-      this.id = randomUUID();
+      this.id = new ObjectId().toString();
     }
   }
 

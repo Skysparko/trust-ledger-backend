@@ -53,6 +53,9 @@ async function bootstrap() {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
+      skipMissingProperties: false, // Validate all properties, even if missing
+      skipNullProperties: false, // Validate null properties
+      skipUndefinedProperties: false, // Validate undefined properties
       transformOptions: {
         enableImplicitConversion: true,
       },

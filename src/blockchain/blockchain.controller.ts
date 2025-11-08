@@ -7,6 +7,8 @@ import {
   UseGuards,
   Request,
   BadRequestException,
+  Logger,
+  UsePipes,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SuperAdminGuard } from '../auth/super-admin.guard';
@@ -16,31 +18,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { InvestmentOpportunity } from '../entities/investment-opportunity.entity';
 import { Investment } from '../entities/investment.entity';
-
-class DeployBondTokenDto {
-  opportunityId: string;
-  name: string;
-  symbol: string;
-  maturityDate: number;
-  couponRate: number;
-  bondPrice: number;
-}
-
-class MintBondsDto {
-  opportunityId: string;
-  toAddress: string;
-  amount: number;
-}
-
-class TransferBondsDto {
-  opportunityId: string;
-  fromAddress: string;
-  toAddress: string;
-  amount: number;
-}
+import { DeployBondTokenDto } from '../dto/blockchain/deploy-bond-token.dto';
+import { MintBondsDto } from '../dto/blockchain/mint-bonds.dto';
+import { TransferBondsDto } from '../dto/blockchain/transfer-bonds.dto';
+import { NoValidationPipe } from './no-validation.pipe';
 
 @Controller('api/blockchain')
 export class BlockchainController {
+  private readonly logger = new Logger(BlockchainController.name);
+
   constructor(
     private readonly blockchainService: BlockchainService,
     @InjectRepository(InvestmentOpportunity)
@@ -51,7 +37,23 @@ export class BlockchainController {
 
   @Post('deploy-bond-token')
   @UseGuards(JwtAuthGuard, SuperAdminGuard)
-  async deployBondToken(@Body() dto: DeployBondTokenDto) {
+  @UsePipes(NoValidationPipe)
+  async deployBondToken(@Body() body: any) {
+    this.logger.log('deployBondToken', body);
+    // Manual validation to avoid class-validator metadata issues
+    const dto: DeployBondTokenDto = {
+      opportunityId: body.opportunityId,
+      name: body.name,
+      symbol: body.symbol,
+      maturityDate: body.maturityDate ? Number(body.maturityDate) : undefined,
+      couponRate: body.couponRate ? Number(body.couponRate) : undefined,
+      bondPrice: body.bondPrice ? Number(body.bondPrice) : undefined,
+    };
+
+    // Basic validation
+    if (!dto.opportunityId || typeof dto.opportunityId !== 'string') {
+      throw new BadRequestException('opportunityId is required and must be a string');
+    }
     const opportunity = await this.opportunityRepository.findOne({
       where: { id: dto.opportunityId },
     });
@@ -79,10 +81,32 @@ export class BlockchainController {
       dto.bondPrice || 100, // Default $100 per bond
     );
 
+    // Validate contract address is not the wallet address
+    const walletAddress = this.blockchainService.getWalletAddress();
+    if (result.contractAddress.toLowerCase() === walletAddress.toLowerCase()) {
+      throw new BadRequestException(
+        `Invalid contract address: Contract address cannot be the same as wallet address. ` +
+        `Contract: ${result.contractAddress}, Wallet: ${walletAddress}`
+      );
+    }
+
+    // Verify contract exists at the address
+    const contractExists = await this.blockchainService.contractExists(result.contractAddress);
+    if (!contractExists) {
+      throw new BadRequestException(
+        `Contract does not exist at address ${result.contractAddress}. Deployment may have failed.`
+      );
+    }
+
     // Update opportunity with contract address
-    opportunity.contractAddress = result.contractAddress;
-    opportunity.contractDeploymentTx = result.transactionHash;
-    await this.opportunityRepository.save(opportunity);
+    // Use update() instead of save() to avoid TypeORM relation loading issues with MongoDB
+    await this.opportunityRepository.update(
+      { id: dto.opportunityId },
+      {
+        contractAddress: result.contractAddress,
+        contractDeploymentTx: result.transactionHash,
+      },
+    );
 
     return {
       success: true,
@@ -268,6 +292,33 @@ export class BlockchainController {
         balance,
         network: process.env.BLOCKCHAIN_NETWORK || 'testnet',
         explorerUrl: this.blockchainService.getContractExplorerUrl(address),
+      },
+    };
+  }
+
+  @Get('contract-from-tx/:txHash')
+  @UseGuards(JwtAuthGuard, SuperAdminGuard)
+  async getContractAddressFromTx(@Param('txHash') txHash: string) {
+    const contractAddress = await this.blockchainService.getContractAddressFromTx(txHash);
+    
+    if (!contractAddress) {
+      throw new BadRequestException(
+        `Could not find contract address from transaction ${txHash}. ` +
+        `This might not be a contract deployment transaction, or the transaction hasn't been confirmed yet.`
+      );
+    }
+
+    // Verify it's actually a contract
+    const contractExists = await this.blockchainService.contractExists(contractAddress);
+    
+    return {
+      success: true,
+      data: {
+        transactionHash: txHash,
+        contractAddress,
+        contractExists,
+        explorerUrl: this.blockchainService.getContractExplorerUrl(contractAddress),
+        transactionUrl: this.blockchainService.getExplorerUrl(txHash),
       },
     };
   }

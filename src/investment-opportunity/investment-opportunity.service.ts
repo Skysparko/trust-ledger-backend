@@ -622,6 +622,7 @@ export class InvestmentOpportunityService {
   }
 
   private mapToListItem(opp: InvestmentOpportunity) {
+    // Include contractAddress in list items for blockchain operations
     const currentFunding = Number(opp.currentFunding) || 0;
     const totalFundingTarget = Number(opp.totalFundingTarget) || 1;
     const fundingProgress = (currentFunding / totalFundingTarget) * 100;
@@ -648,6 +649,7 @@ export class InvestmentOpportunityService {
       thumbnailImage: opp.thumbnailImage,
       logo: opp.logo,
       isFeatured: opp.isFeatured,
+      contractAddress: opp.contractAddress || undefined, // Include contract address for blockchain operations
       createdAt: opp.createdAt?.toISOString(),
       updatedAt: opp.updatedAt?.toISOString(),
     };

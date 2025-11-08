@@ -7,7 +7,7 @@ import {
   BeforeInsert,
   BeforeUpdate,
 } from 'typeorm';
-import { randomUUID } from 'crypto';
+import { ObjectId } from 'mongodb';
 import { User } from './user.entity';
 import { Investment } from './investment.entity';
 import { PaymentMethod } from './investment.entity';
@@ -26,7 +26,7 @@ export enum TransactionStatus {
 
 @Entity('transactions')
 export class Transaction {
-  @PrimaryColumn()
+  @PrimaryColumn({ type: 'string' })
   id: string;
 
   @ManyToOne(() => User, (user) => user.transactions)
@@ -73,7 +73,7 @@ export class Transaction {
   @BeforeInsert()
   beforeInsert() {
     if (!this.id) {
-      this.id = randomUUID();
+      this.id = new ObjectId().toString();
     }
     if (!this.status) {
       this.status = TransactionStatus.PENDING;
