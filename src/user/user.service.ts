@@ -211,7 +211,7 @@ export class UserService {
     }
 
     // Calculate amount: $100 per bond (default)
-    const amount = createInvestmentDto.bonds * 100;
+    const amount = createInvestmentDto.bonds * investmentOpportunity.minInvestment;
 
     if (amount < Number(investmentOpportunity.minInvestment)) {
       throw new BadRequestException(

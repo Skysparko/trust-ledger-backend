@@ -12,6 +12,7 @@ import {
   MinLength,
   MaxLength,
   ValidateNested,
+  ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import {
@@ -129,6 +130,7 @@ export class CreateInvestmentOpportunityDto {
   @IsOptional()
   companyDescription?: string;
 
+  @ValidateIf((o) => o.companyWebsite !== null && o.companyWebsite !== undefined && o.companyWebsite !== '')
   @IsUrl({ require_tld: false })
   @IsOptional()
   companyWebsite?: string;
@@ -164,10 +166,12 @@ export class CreateInvestmentOpportunityDto {
   jurisdiction?: string;
 
   // Media
+  @ValidateIf((o) => o.thumbnailImage !== null && o.thumbnailImage !== undefined && o.thumbnailImage !== '')
   @IsUrl({ require_tld: false })
   @IsOptional()
   thumbnailImage?: string;
 
+  @ValidateIf((o) => o.logo !== null && o.logo !== undefined && o.logo !== '')
   @IsUrl({ require_tld: false })
   @IsOptional()
   logo?: string;
@@ -177,6 +181,7 @@ export class CreateInvestmentOpportunityDto {
   @IsOptional()
   images?: string[];
 
+  @ValidateIf((o) => o.videoUrl !== null && o.videoUrl !== undefined && o.videoUrl !== '')
   @IsUrl({ require_tld: false })
   @IsOptional()
   videoUrl?: string;
