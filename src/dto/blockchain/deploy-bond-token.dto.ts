@@ -19,7 +19,7 @@ export class DeployBondTokenDto {
   @IsNumber()
   @Min(0)
   @IsOptional()
-  couponRate?: number;
+  couponRate?: number; // Annual interest rate as percentage (e.g., 7.5 for 7.5%). Will be converted to basis points internally.
 
   @IsNumber()
   @Min(0)

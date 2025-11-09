@@ -72,12 +72,19 @@ export class BlockchainController {
     const maturityTimestamp = maturityDate.getTime();
 
     // Deploy contract
+    // IMPORTANT: couponRate should be provided as a percentage (e.g., 7.5 for 7.5%)
+    // If not provided, use opportunity.rate (which is already a percentage)
+    // The service will convert it to basis points (multiply by 100)
+    const couponRatePercentage = dto.couponRate !== undefined 
+      ? dto.couponRate  // User provided value (assumed to be percentage)
+      : opportunity.rate; // Use opportunity rate (already a percentage)
+    
     const result = await this.blockchainService.deployBondToken(
       dto.opportunityId,
       dto.name || `${opportunity.company} Bond`,
       dto.symbol || `${opportunity.company.substring(0, 3).toUpperCase()}BOND`,
       maturityTimestamp,
-      dto.couponRate || opportunity.rate * 100, // Convert to basis points
+      couponRatePercentage, // Pass as percentage, service will convert to basis points
       dto.bondPrice || 100, // Default $100 per bond
     );
 
