@@ -210,7 +210,7 @@ export class UserService {
       throw new BadRequestException('Investment opportunity is not active for investment');
     }
 
-    // Calculate amount: $100 per bond (default)
+    // Calculate amount: investmentOpportunity.minInvestment per bond (default)
     const amount = createInvestmentDto.bonds * investmentOpportunity.minInvestment;
 
     if (amount < Number(investmentOpportunity.minInvestment)) {
@@ -226,7 +226,7 @@ export class UserService {
     }
 
     const newFunding = Number(investmentOpportunity.currentFunding) + amount;
-    if (newFunding > Number(investmentOpportunity.totalFundingTarget)) {
+    if (newFunding > Number(investmentOpportunity.maxInvestment)) {
       throw new BadRequestException('Investment exceeds funding target');
     }
 

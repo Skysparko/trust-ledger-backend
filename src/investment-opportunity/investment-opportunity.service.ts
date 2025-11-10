@@ -625,7 +625,7 @@ export class InvestmentOpportunityService {
     // Include contractAddress in list items for blockchain operations
     const currentFunding = Number(opp.currentFunding) || 0;
     const totalFundingTarget = Number(opp.totalFundingTarget) || 1;
-    const fundingProgress = (currentFunding / totalFundingTarget) * 100;
+    const fundingProgress = (currentFunding / opp.maxInvestment) * 100;
 
     return {
       id: opp.id,

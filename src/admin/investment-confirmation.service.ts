@@ -79,6 +79,11 @@ export class InvestmentConfirmationService {
       throw new BadRequestException('Investment opportunity is not active');
     }
 
+    const amountExceeded = Number(investmentOpportunity.currentFunding) + Number(investment.amount)
+    if (amountExceeded > Number(investmentOpportunity.maxInvestment)) {
+      throw new BadRequestException('Investment exceeds funding target');
+    }
+
     // Log opportunity details for debugging
     this.logger.log(`Investment opportunity ${investmentOpportunity.id}: ${investmentOpportunity.title}`);
     this.logger.log(`Contract address: ${investmentOpportunity.contractAddress || 'NOT DEPLOYED'}`);
@@ -145,7 +150,7 @@ export class InvestmentConfirmationService {
     };
 
     // Check if funding target is reached
-    if (newFunding >= Number(investmentOpportunity.totalFundingTarget)) {
+    if (newFunding >= Number(investmentOpportunity.maxInvestment)) {
       updateData.$set.status = InvestmentOpportunityStatus.CLOSED;
     }
 
