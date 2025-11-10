@@ -65,9 +65,9 @@ async function bootstrap() {
   // Swagger API Documentation
   if (process.env.NODE_ENV !== 'production') {
     const config = new DocumentBuilder()
-      .setTitle('TrustLedger API')
+      .setTitle('RWA API')
       .setDescription(
-        'Backend API for TrustLedger - Investment Platform for Renewable Energy Projects',
+        'Backend API for RWA - Investment Platform for Renewable Energy Projects',
       )
       .setVersion('1.0')
       .addBearerAuth(

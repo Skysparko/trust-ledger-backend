@@ -22,7 +22,7 @@ SMTP_SECURE=false
 EMAIL_USER=shubhamrakhecha5@gmail.com
 EMAIL_PASS=adqv ybmo qoju tlql
 EMAIL_FROM=shubhamrakhecha5@gmail.com
-SMTP_FROM_NAME=TrustLedger
+SMTP_FROM_NAME=RWA
 
 # Application URLs
 FRONTEND_URL=http://localhost:3001

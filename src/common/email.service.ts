@@ -36,11 +36,11 @@ export class EmailService {
 
     this.fromEmail = this.configService.get<string>(
       'EMAIL_FROM',
-      this.configService.get<string>('SMTP_FROM', 'noreply@trustledger.com'),
+      this.configService.get<string>('SMTP_FROM', 'noreply@rwa.com'),
     );
     this.fromName = this.configService.get<string>(
       'SMTP_FROM_NAME',
-      'TrustLedger',
+      'RWA',
     );
     this.frontendUrl = this.configService.get<string>(
       'FRONTEND_URL',
@@ -128,19 +128,19 @@ export class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <h1>Welcome to TrustLedger!</h1>
+              <h1>Welcome to RWA!</h1>
             </div>
             <div class="content">
               <p>Hello ${name},</p>
-              <p>Thank you for signing up with TrustLedger. Please verify your email address by clicking the button below:</p>
+              <p>Thank you for signing up with RWA. Please verify your email address by clicking the button below:</p>
               <a href="${verificationUrl}" class="button">Verify Email Address</a>
               <p>Or copy and paste this link into your browser:</p>
               <p>${verificationUrl}</p>
               <p>This link will expire in 24 hours.</p>
-              <p>If you didn't create an account with TrustLedger, please ignore this email.</p>
+              <p>If you didn't create an account with RWA, please ignore this email.</p>
             </div>
             <div class="footer">
-              <p>&copy; ${new Date().getFullYear()} TrustLedger. All rights reserved.</p>
+              <p>&copy; ${new Date().getFullYear()} RWA. All rights reserved.</p>
             </div>
           </div>
         </body>
@@ -148,21 +148,21 @@ export class EmailService {
     `;
 
     const text = `
-      Welcome to TrustLedger!
+      Welcome to RWA!
       
       Hello ${name},
       
-      Thank you for signing up with TrustLedger. Please verify your email address by visiting:
+      Thank you for signing up with RWA. Please verify your email address by visiting:
       ${verificationUrl}
       
       This link will expire in 24 hours.
       
-      If you didn't create an account with TrustLedger, please ignore this email.
+      If you didn't create an account with RWA, please ignore this email.
     `;
 
     await this.sendEmail({
       to: email,
-      subject: 'Verify Your TrustLedger Email Address',
+      subject: 'Verify Your RWA Email Address',
       html,
       text,
     });
@@ -193,7 +193,7 @@ export class EmailService {
             </div>
             <div class="content">
               <p>Hello ${name},</p>
-              <p>We received a request to reset your password for your TrustLedger account.</p>
+              <p>We received a request to reset your password for your RWA account.</p>
               <p>Click the button below to reset your password:</p>
               <a href="${resetUrl}" class="button">Reset Password</a>
               <p>Or copy and paste this link into your browser:</p>
@@ -204,7 +204,7 @@ export class EmailService {
               </div>
             </div>
             <div class="footer">
-              <p>&copy; ${new Date().getFullYear()} TrustLedger. All rights reserved.</p>
+              <p>&copy; ${new Date().getFullYear()} RWA. All rights reserved.</p>
             </div>
           </div>
         </body>
@@ -216,7 +216,7 @@ export class EmailService {
       
       Hello ${name},
       
-      We received a request to reset your password for your TrustLedger account.
+      We received a request to reset your password for your RWA account.
       
       Visit this link to reset your password:
       ${resetUrl}
@@ -228,7 +228,7 @@ export class EmailService {
 
     await this.sendEmail({
       to: email,
-      subject: 'Reset Your TrustLedger Password',
+      subject: 'Reset Your RWA Password',
       html,
       text,
     });
@@ -254,7 +254,7 @@ export class EmailService {
               <h1>Newsletter Subscription Confirmed</h1>
             </div>
             <div class="content">
-              <p>Thank you for subscribing to the TrustLedger newsletter!</p>
+              <p>Thank you for subscribing to the RWA newsletter!</p>
               <p>You will now receive updates about:</p>
               <ul>
                 <li>New investment opportunities</li>
@@ -265,7 +265,7 @@ export class EmailService {
               <p>We're excited to have you as part of our community!</p>
             </div>
             <div class="footer">
-              <p>&copy; ${new Date().getFullYear()} TrustLedger. All rights reserved.</p>
+              <p>&copy; ${new Date().getFullYear()} RWA. All rights reserved.</p>
               <p>You can unsubscribe at any time by clicking the link in any newsletter email.</p>
             </div>
           </div>
@@ -275,7 +275,7 @@ export class EmailService {
 
     await this.sendEmail({
       to: email,
-      subject: 'Newsletter Subscription Confirmed - TrustLedger',
+      subject: 'Newsletter Subscription Confirmed - RWA',
       html,
     });
   }
@@ -307,11 +307,11 @@ export class EmailService {
                 <p><strong>Your Interest:</strong> ${interest.charAt(0).toUpperCase() + interest.slice(1)} Energy</p>
               </div>
               <p>Our team will be in touch with you shortly with detailed information about our ${interest} energy investment opportunities.</p>
-              <p>In the meantime, feel free to explore our platform and learn more about how TrustLedger is revolutionizing renewable energy investments.</p>
-              <p>Best regards,<br>The TrustLedger Team</p>
+              <p>In the meantime, feel free to explore our platform and learn more about how RWA is revolutionizing renewable energy investments.</p>
+              <p>Best regards,<br>The RWA Team</p>
             </div>
             <div class="footer">
-              <p>&copy; ${new Date().getFullYear()} TrustLedger. All rights reserved.</p>
+              <p>&copy; ${new Date().getFullYear()} RWA. All rights reserved.</p>
             </div>
           </div>
         </body>
@@ -320,7 +320,7 @@ export class EmailService {
 
     await this.sendEmail({
       to: email,
-      subject: 'Thank You for Your Interest - TrustLedger',
+      subject: 'Thank You for Your Interest - RWA',
       html,
     });
   }
@@ -460,12 +460,12 @@ export class EmailService {
 
               <p>You can view your investment details and download documents from your dashboard at <a href="${this.frontendUrl}/dashboard">${this.frontendUrl}/dashboard</a>.</p>
               
-              <p>Thank you for investing with TrustLedger!</p>
+              <p>Thank you for investing with RWA!</p>
               
-              <p>Best regards,<br>The TrustLedger Team</p>
+              <p>Best regards,<br>The RWA Team</p>
             </div>
             <div class="footer">
-              <p>&copy; ${new Date().getFullYear()} TrustLedger. All rights reserved.</p>
+              <p>&copy; ${new Date().getFullYear()} RWA. All rights reserved.</p>
               <p>This is an automated email. Please do not reply to this message.</p>
             </div>
           </div>
@@ -474,7 +474,7 @@ export class EmailService {
     `;
 
     const text = `
-      Investment Confirmed - TrustLedger
+      Investment Confirmed - RWA
       
       Dear ${name},
       
@@ -492,15 +492,15 @@ export class EmailService {
       
       Your investment has been confirmed and your bonds have been added to your portfolio. You can view your investment details and download documents from your dashboard.
       
-      Thank you for investing with TrustLedger!
+      Thank you for investing with RWA!
       
       Best regards,
-      The TrustLedger Team
+      The RWA Team
     `;
 
     await this.sendEmail({
       to: email,
-      subject: 'Investment Confirmed - TrustLedger',
+      subject: 'Investment Confirmed - RWA',
       html,
       text,
     });
@@ -618,10 +618,10 @@ export class EmailService {
               
               <p>If you have any questions, please don't hesitate to contact our support team.</p>
               
-              <p>Best regards,<br>The TrustLedger Team</p>
+              <p>Best regards,<br>The RWA Team</p>
             </div>
             <div class="footer">
-              <p>&copy; ${new Date().getFullYear()} TrustLedger. All rights reserved.</p>
+              <p>&copy; ${new Date().getFullYear()} RWA. All rights reserved.</p>
               <p>This is an automated email. Please do not reply to this message.</p>
             </div>
           </div>
@@ -630,7 +630,7 @@ export class EmailService {
     `;
 
     const text = `
-      Investment Cancelled - TrustLedger
+      Investment Cancelled - RWA
       
       Dear ${name},
       
@@ -653,12 +653,12 @@ export class EmailService {
       If you have any questions or concerns, please contact our support team.
       
       Best regards,
-      The TrustLedger Team
+      The RWA Team
     `;
 
     await this.sendEmail({
       to: email,
-      subject: 'Investment Cancelled - TrustLedger',
+      subject: 'Investment Cancelled - RWA',
       html,
       text,
     });

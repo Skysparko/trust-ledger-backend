@@ -9,7 +9,7 @@ export class AppService {
   getHealth() {
     return {
       status: 'ok',
-      message: 'TrustLedger API is running',
+      message: 'RWA API is running',
       timestamp: new Date().toISOString(),
     };
   }

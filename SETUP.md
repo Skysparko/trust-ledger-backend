@@ -37,8 +37,8 @@ SMTP_PORT=587
 SMTP_SECURE=false
 SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
-SMTP_FROM=noreply@trustledger.com
-SMTP_FROM_NAME=TrustLedger
+SMTP_FROM=noreply@rwa.com
+SMTP_FROM_NAME=RWA
 
 # Application URLs
 FRONTEND_URL=http://localhost:3001
@@ -95,8 +95,8 @@ SMTP_PORT=587
 SMTP_SECURE=false
 SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=xxxx-xxxx-xxxx-xxxx  # Use the app password here
-SMTP_FROM=noreply@trustledger.com
-SMTP_FROM_NAME=TrustLedger
+SMTP_FROM=noreply@rwa.com
+SMTP_FROM_NAME=RWA
 ```
 
 **For Other SMTP Providers:**
@@ -198,8 +198,8 @@ SMTP_PORT=587
 SMTP_SECURE=false
 SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
-SMTP_FROM=noreply@trustledger.com
-SMTP_FROM_NAME=TrustLedger
+SMTP_FROM=noreply@rwa.com
+SMTP_FROM_NAME=RWA
 
 # Application URLs
 FRONTEND_URL=http://localhost:3001
@@ -246,8 +246,8 @@ SMTP_PORT=587
 SMTP_SECURE=false
 SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
-SMTP_FROM=noreply@trustledger.com
-SMTP_FROM_NAME=TrustLedger
+SMTP_FROM=noreply@rwa.com
+SMTP_FROM_NAME=RWA
 
 # Application URLs
 FRONTEND_URL=http://localhost:3001

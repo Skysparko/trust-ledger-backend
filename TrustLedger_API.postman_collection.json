@@ -1,10 +1,10 @@
 {
 	"info": {
-		"_postman_id": "trust-ledger-api-collection",
-		"name": "TrustLedger API",
-		"description": "Backend API for TrustLedger - Investment Platform for Renewable Energy Projects",
+		"_postman_id": "rwa-api-collection",
+		"name": "RWA API",
+		"description": "Backend API for RWA - Investment Platform for Renewable Energy Projects",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "trust-ledger"
+		"_exporter_id": "rwa"
 	},
 	"auth": {
 		"type": "bearer",

@@ -1,6 +1,6 @@
-# TrustLedger Backend API
+# RWA Backend API
 
-Backend API for TrustLedger - Investment Platform for Renewable Energy Projects (Wind & Solar).
+Backend API for RWA - Investment Platform for Renewable Energy Projects (Wind & Solar).
 
 ## Technology Stack
 
@@ -118,8 +118,8 @@ SMTP_PORT=587
 SMTP_SECURE=false
 SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
-SMTP_FROM=noreply@trustledger.com
-SMTP_FROM_NAME=TrustLedger
+SMTP_FROM=noreply@rwa.com
+SMTP_FROM_NAME=RWA
 
 # Application URLs
 FRONTEND_URL=http://localhost:3001
