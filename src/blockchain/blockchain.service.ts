@@ -75,7 +75,7 @@ export class BlockchainService {
     name: string,
     symbol: string,
     maturityDate: number, // Unix timestamp
-    couponRate: number, // Annual rate in basis points (e.g., 500 = 5%)
+    couponRate: number, // Annual rate as percentage (e.g., 7.5 = 7.5%)
     bondPrice: number, // Price per bond (in base units, e.g., 100 = 100 tokens)
   ): Promise<{ contractAddress: string; transactionHash: string }> {
     try {
@@ -110,8 +110,12 @@ export class BlockchainService {
 
       // Convert parameters
       const maturityTimestamp = BigInt(Math.floor(maturityDate / 1000)); // Convert to seconds
-      const couponRateBps = BigInt(couponRate * 100); // Convert percentage to basis points
+      // couponRate is provided as percentage (e.g., 7.5), convert to basis points (750)
+      // Basis points: 1% = 100 basis points, so 7.5% = 750 basis points
+      const couponRateBps = BigInt(Math.round(couponRate * 100)); // Convert percentage to basis points
       const bondPriceWei = ethers.parseUnits(bondPrice.toString(), 18);
+      
+      this.logger.log(`[DEPLOY] Coupon rate: ${couponRate}% = ${couponRateBps.toString()} basis points`);
 
       const contract = await contractFactory.deploy(
         name,
