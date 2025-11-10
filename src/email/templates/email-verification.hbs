@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <style>
+      body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+      .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+      .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; }
+      .content { padding: 20px; background-color: #f9f9f9; }
+      .button { display: inline-block; padding: 12px 24px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+      .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Welcome to RWA!</h1>
+      </div>
+      <div class="content">
+        <p>Hello {{name}},</p>
+        <p>Thank you for signing up with RWA. Please verify your email address by clicking the button below:</p>
+        <a href="{{verificationUrl}}" class="button">Verify Email Address</a>
+        <p>Or copy and paste this link into your browser:</p>
+        <p>{{verificationUrl}}</p>
+        <p>This link will expire in 24 hours.</p>
+        <p>If you didn't create an account with RWA, please ignore this email.</p>
+      </div>
+      <div class="footer">
+        <p>&copy; {{year}} RWA. All rights reserved.</p>
+      </div>
+    </div>
+  </body>
+</html>
+
