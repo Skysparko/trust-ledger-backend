@@ -322,6 +322,7 @@ export class InvestmentConfirmationService {
               mintTxHash: mintTxHash || null,
               contractAddress: investmentOpportunity.contractAddress || null,
               walletAddress: walletAddress || null,
+              adminWalletAddress: mintTxHash ? this.blockchainService.getWalletAddress() : null,
               explorerUrl: mintTxHash 
                 ? this.blockchainService.getExplorerUrl(mintTxHash)
                 : null,

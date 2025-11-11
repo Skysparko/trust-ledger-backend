@@ -213,6 +213,7 @@ export class EmailService {
       mintTxHash?: string | null;
       contractAddress?: string | null;
       walletAddress?: string | null;
+      adminWalletAddress?: string | null;
       explorerUrl?: string | null;
     },
   ): Promise<void> {
@@ -256,6 +257,7 @@ export class EmailService {
         mintTxHash: formatTxHash(investment.mintTxHash),
         contractAddress: formatAddress(investment.contractAddress),
         walletAddress: formatAddress(investment.walletAddress),
+        adminWalletAddress: formatAddress(investment.adminWalletAddress),
         explorerUrl: investment.explorerUrl,
         hasBlockchain: !!investment.mintTxHash,
         dashboardUrl: `${this.frontendUrl}/dashboard`,
